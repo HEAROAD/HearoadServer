@@ -17,10 +17,10 @@ public class KakaoController {
     private final KakaoService kakaoService;
 
     @GetMapping("/callback")
-    public ResponseEntity<MsgEntity> callback(HttpServletRequest request) throws Exception{
+    public ResponseEntity<MsgEntity> callback(HttpServletRequest request) throws Exception {
         KakaoDTO kakaoDTO = kakaoService.getKakaoInfo(request.getParameter("code"));
 
         return ResponseEntity.ok()
-                .body(new MsgEntity("Success", request));
+                .body(new MsgEntity("Success", kakaoDTO));
     }
 }

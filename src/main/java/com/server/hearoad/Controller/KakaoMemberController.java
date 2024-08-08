@@ -18,7 +18,7 @@ public class KakaoMemberController {
     private KakaoMemberRepository kakaoMemberRepository;
 
     @GetMapping("/show")
-    private void  doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
+    private void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         PrintWriter out = response.getWriter();
         String name = "";
 
@@ -29,5 +29,4 @@ public class KakaoMemberController {
         out.print("이름 " + name + "<br>");
         out.print("<html><body>");
     }
-
 }

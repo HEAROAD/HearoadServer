@@ -3,15 +3,11 @@ package com.server.hearoad.Service;
 import com.server.hearoad.DTO.KakaoDTO;
 import com.server.hearoad.Repository.KakaoMemberRepository;
 import com.server.hearoad.domain.KakaoMember;
-import jakarta.servlet.ServletRequestAttributeEvent;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -27,7 +23,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Service
 @RequiredArgsConstructor
 public class KakaoService {
-    @Autowired
     private final KakaoMemberRepository kakaoMemberRepository;
 
     @Value("${kakao.client.id}")
@@ -42,19 +37,19 @@ public class KakaoService {
     private final static String KAKAO_AUTH_URI = "https://kauth.kakao.com";
     private final static String KAKAO_API_URI = "https://kapi.kakao.com";
 
-    public String getKakaoLogin(){
+    public String getKakaoLogin() {
         return KAKAO_AUTH_URI + "/oauth/authorize"
                 + "?client_id=" + KAKAO_CLIENT_ID
                 + "&redirect_uri=" + KAKAO_REDIRECT_URL
                 + "&response_type=code";
     }
 
-    public KakaoDTO getKakaoInfo(String code) throws Exception{
-        if(code == null) throw new Exception("Failed get autorization code");
+    public KakaoDTO getKakaoInfo(String code) throws Exception {
+        if (code == null) throw new Exception("Failed get authorization code");
 
         String accessToken = "";
 
-        try{
+        try {
             HttpHeaders headers = new HttpHeaders();
             headers.add("Content-type", "application/x-www-form-urlencoded");
 
@@ -66,7 +61,7 @@ public class KakaoService {
             params.add("redirect_uri", KAKAO_REDIRECT_URL);
 
             RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<MultiValueMap<String,String>> httpEntity = new HttpEntity<>(params, headers);
+            HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
 
             ResponseEntity<String> response = restTemplate.exchange(
                     KAKAO_AUTH_URI + "/oauth/token",
@@ -79,24 +74,26 @@ public class KakaoService {
             JSONObject jsonObject = (JSONObject) jsonParser.parse(response.getBody());
 
             accessToken = (String) jsonObject.get("access_token");
-        } catch (Exception e){
+        } catch (Exception e) {
             throw new Exception("Api call failed");
         }
         return getUserInfoWithToken(accessToken);
     }
-    private KakaoDTO getUserInfoWithToken(String accessToken) throws Exception{
+
+    private KakaoDTO getUserInfoWithToken(String accessToken) throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + accessToken);
         headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
 
         RestTemplate rt = new RestTemplate();
-        HttpEntity<MultiValueMap<String,String>> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(headers);
         ResponseEntity<String> response = rt.exchange(
                 KAKAO_API_URI + "/v2/user/me",
                 HttpMethod.POST,
                 httpEntity,
                 String.class
         );
+
         JSONParser jsonParser = new JSONParser();
         JSONObject jsonObj = (JSONObject) jsonParser.parse(response.getBody());
         JSONObject account = (JSONObject) jsonObj.get("kakao_account");
@@ -112,7 +109,7 @@ public class KakaoService {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
         HttpSession session = request.getSession();
-        session.setAttribute("kakaomember",kakaoMember);
+        session.setAttribute("kakaomember", kakaoMember);
 
         return KakaoDTO.builder()
                 .id(id)
