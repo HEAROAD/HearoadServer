@@ -2,10 +2,12 @@ package com.server.hearoad.Kakao;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.server.hearoad.Kakao.Oauth.OauthId;
+import com.server.hearoad.Kakao.Oauth.OauthMember;
 
 import java.time.LocalDateTime;
 
-import static com.server.hearoad.Kakao.OauthServerType.KAKAO;
+import static com.server.hearoad.Kakao.Oauth.OauthServerType.KAKAO;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record KakaoMemberResponse(

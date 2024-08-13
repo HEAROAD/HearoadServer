@@ -1,5 +1,6 @@
-package com.server.hearoad.Kakao;
+package com.server.hearoad.Kakao.Oauth;
 
+import com.server.hearoad.Kakao.Oauth.OauthId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

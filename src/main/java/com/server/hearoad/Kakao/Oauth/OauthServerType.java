@@ -1,4 +1,4 @@
-package com.server.hearoad.Kakao;
+package com.server.hearoad.Kakao.Oauth;
 
 import static java.util.Locale.ENGLISH;
 

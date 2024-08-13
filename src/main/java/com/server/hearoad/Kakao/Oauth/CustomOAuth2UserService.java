@@ -1,4 +1,4 @@
-package com.server.hearoad.Kakao;
+package com.server.hearoad.Kakao.Oauth;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;

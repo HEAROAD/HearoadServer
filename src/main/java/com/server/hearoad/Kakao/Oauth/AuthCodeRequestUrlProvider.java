@@ -1,6 +1,4 @@
-package com.server.hearoad.Kakao;
-
-import com.server.hearoad.Kakao.OauthServerType;
+package com.server.hearoad.Kakao.Oauth;
 
 public interface AuthCodeRequestUrlProvider {
     OauthServerType supportServer();

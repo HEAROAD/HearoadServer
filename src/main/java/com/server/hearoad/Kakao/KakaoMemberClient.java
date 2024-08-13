@@ -1,5 +1,7 @@
 package com.server.hearoad.Kakao;
 
+import com.server.hearoad.Kakao.Oauth.OauthMember;
+import com.server.hearoad.Kakao.Oauth.OauthServerType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -7,7 +9,7 @@ import org.springframework.util.MultiValueMap;
 
 @Component
 @RequiredArgsConstructor
-public class KakaoMemberClient implements OauthMemberClient {
+public class KakaoMemberClient implements KakaoApiClient.OauthMemberClient {
 
     private final KakaoApiClient kakaoApiClient;
     private final KakaoOauthConfig kakaoOauthConfig;

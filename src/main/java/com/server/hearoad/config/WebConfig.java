@@ -1,5 +1,6 @@
-package com.server.hearoad.Kakao;
+package com.server.hearoad.config;
 
+import com.server.hearoad.Kakao.Oauth.OauthServerTypeConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
