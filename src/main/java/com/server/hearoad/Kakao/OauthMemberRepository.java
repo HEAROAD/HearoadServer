@@ -1,9 +1,6 @@
-package com.server.hearoad.Kakao.Oauth;
+package com.server.hearoad.Kakao;
 
 import java.util.Optional;
-
-import com.server.hearoad.Kakao.Oauth.OauthId;
-import com.server.hearoad.Kakao.Oauth.OauthMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OauthMemberRepository extends JpaRepository<OauthMember, Long> {

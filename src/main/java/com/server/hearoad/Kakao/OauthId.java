@@ -1,4 +1,4 @@
-package com.server.hearoad.Kakao.Oauth;
+package com.server.hearoad.Kakao;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

@@ -1,7 +1,5 @@
 package com.server.hearoad.Kakao;
 
-import com.server.hearoad.Kakao.Oauth.OauthMember;
-import com.server.hearoad.Kakao.Oauth.OauthServerType;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,10 +17,4 @@ public interface KakaoApiClient {
     @GetExchange("https://kapi.kakao.com/v2/user/me")
     KakaoMemberResponse fetchMember(@RequestHeader(name = AUTHORIZATION) String bearerToken);
 
-    interface OauthMemberClient {
-
-        OauthServerType supportServer();
-
-        OauthMember fetch(String code);
-    }
 }

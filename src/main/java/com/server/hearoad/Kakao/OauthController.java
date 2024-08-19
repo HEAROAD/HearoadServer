@@ -1,4 +1,4 @@
-package com.server.hearoad.Kakao.Oauth;
+package com.server.hearoad.Kakao;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

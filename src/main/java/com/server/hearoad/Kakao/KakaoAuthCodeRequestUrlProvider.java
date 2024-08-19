@@ -1,7 +1,5 @@
 package com.server.hearoad.Kakao;
 
-import com.server.hearoad.Kakao.Oauth.AuthCodeRequestUrlProvider;
-import com.server.hearoad.Kakao.Oauth.OauthServerType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
