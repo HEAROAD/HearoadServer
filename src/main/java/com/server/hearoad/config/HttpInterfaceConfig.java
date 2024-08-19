@@ -1,4 +1,4 @@
-package com.server.hearoad.config;
+package com.server.hearoad.Config;
 
 import com.server.hearoad.Kakao.KakaoApiClient;
 import org.springframework.context.annotation.Bean;

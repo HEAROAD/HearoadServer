@@ -1,4 +1,4 @@
-package com.server.hearoad.config;
+package com.server.hearoad.Config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,8 +27,8 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
-                        .defaultSuccessUrl("/home", true)
-                        .failureUrl("/login?error=true")
+                        .defaultSuccessUrl("/success", true)  // 성공 시 /success 페이지로 리디렉션
+                        .failureUrl("/fail")
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(oAuth2UserService)
                         )

@@ -9,4 +9,11 @@ public record KakaoOauthConfig(
         String clientSecret,
         String[] scope
 ) {
+    // 기본 scope를 설정
+    public KakaoOauthConfig {
+        if (scope == null) {
+            scope = new String[]{"profile_nickname", "profile_image"};
+        }
+    }
 }
+
