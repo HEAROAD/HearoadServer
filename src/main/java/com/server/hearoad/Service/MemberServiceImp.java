@@ -3,6 +3,7 @@ package com.server.hearoad.Service;
 import com.server.hearoad.Model.Member;
 import com.server.hearoad.Repository.MemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,7 +29,8 @@ public class MemberServiceImp implements MemberService {
     }
 
     @Override
-    public  Member saveOrUpdateMember(Member member){
+    public Member saveOrUpdateMember(Member member){
+        // 비밀번호 암호화 제거
         return memberRepository.save(member);
     }
 

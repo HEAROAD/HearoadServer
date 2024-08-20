@@ -3,13 +3,11 @@ package com.server.hearoad.Controller;
 import com.server.hearoad.DTO.MemberDTO;
 import com.server.hearoad.Model.Member;
 import com.server.hearoad.Service.MemberServiceImp;
-import com.server.hearoad.Service.util.ObjectMapperUtils;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/users/register")
@@ -18,42 +16,36 @@ public class MemberController {
     @Autowired
     private MemberServiceImp memberService;
 
-    @GetMapping(value = "/")
-    public List<MemberDTO> getAllMembers() {
-        return ObjectMapperUtils.mapAll(memberService.findAll(), MemberDTO.class);
-    }
 
-    @GetMapping(value = "byEmail/{email}")
-    public MemberDTO getMemberByEmail(@PathVariable("email") String email) {
-        return ObjectMapperUtils.map(memberService.findByEmail(email), MemberDTO.class);
-    }
-
-    @GetMapping(value = "/orderByNameDesc")
-    public List<MemberDTO> findAllByOrderByNameDesc() {
-        return ObjectMapperUtils.mapAll(memberService.findAllByOrderByNameDesc(), MemberDTO.class);
-    }
 
     @PostMapping(value = "/save")
-    public ResponseEntity<?> saveOrUpdateMember(@RequestBody MemberDTO memberDTO) {
-        Member member = memberService.findByEmail(memberDTO.getEmail());
-        String responseMessage = "Member added success";
-        if (member != null && member.getId() != null && member.getId().length() > 0) {
-            responseMessage = "This Email already Exist";
+    public ResponseEntity<String> saveOrUpdateMember(@RequestBody MemberDTO memberDTO) {
+        Member existingMember = memberService.findByEmail(memberDTO.getEmail());
+        if (existingMember != null) {
+            return new ResponseEntity<>("This Email already exists", HttpStatus.BAD_REQUEST);
         } else {
-            memberService.saveOrUpdateMember(ObjectMapperUtils.map(memberDTO, Member.class));
+            // 비밀번호를 암호화하지 않고 그대로 저장
+            Member member = new Member();
+            member.setName(memberDTO.getName());
+            member.setEmail(memberDTO.getEmail());
+            member.setPassword(memberDTO.getPassword()); // 평문 비밀번호 그대로 저장
+            memberService.saveOrUpdateMember(member);
+            return new ResponseEntity<>("Member added successfully", HttpStatus.OK);
         }
-        return new ResponseEntity<>(responseMessage, HttpStatus.OK);
     }
 
-    @PostMapping(value = "/delete/{email}")
-    public ResponseEntity<?> deleteMemberByEmail(@PathVariable String email) {
-        Member member = memberService.findByEmail(email);
-        String responseMessage = "Member Deleted success";
-        if (member != null && member.getId() != null && member.getId().length() > 0) {
-            memberService.deleteMemberById(memberService.findByEmail(email).getId());
+    @PostMapping(value = "/login")
+    public ResponseEntity<String> loginMember(@RequestBody MemberDTO memberDTO, HttpSession session) {
+        Member member = memberService.findByEmail(memberDTO.getEmail());
+        if (member == null) {
+            return new ResponseEntity<>("Invalid email", HttpStatus.UNAUTHORIZED);
+        } else if (!memberDTO.getPassword().equals(member.getPassword())) {
+            return new ResponseEntity<>("Invalid password", HttpStatus.UNAUTHORIZED);
         } else {
-            responseMessage = "This Email Does Not exist in our Member List";
+            // 로그인 성공 시 이메일을 세션에 저장
+            session.setAttribute("userEmail", member.getEmail());
+            return new ResponseEntity<>("Login successful", HttpStatus.OK);
         }
-        return new ResponseEntity<>(responseMessage, HttpStatus.OK);
     }
+
 }
