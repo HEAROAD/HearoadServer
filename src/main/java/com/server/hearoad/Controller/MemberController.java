@@ -42,10 +42,11 @@ public class MemberController {
         } else if (!memberDTO.getPassword().equals(member.getPassword())) {
             return new ResponseEntity<>("Invalid password", HttpStatus.UNAUTHORIZED);
         } else {
-            // 로그인 성공 시 이메일을 세션에 저장
-            session.setAttribute("userEmail", member.getEmail());
+            // 로그인 성공 시 ID를 세션에 저장
+            session.setAttribute("userId", member.getId());
             return new ResponseEntity<>("Login successful", HttpStatus.OK);
         }
     }
+
 
 }

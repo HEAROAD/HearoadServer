@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,15 +21,16 @@ public class MyPageController {
 
     @GetMapping("/info")
     public ResponseEntity<MemberDTO> getMemberInfo(HttpSession session) {
-        String email = (String) session.getAttribute("userEmail");
+        String id = (String) session.getAttribute("userId");
 
-        if (email == null) {
+        if (id == null) {
             return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
         }
 
-        Member member = memberService.findByEmail(email);
+        Member member = memberService.findById(id);
         if (member != null) {
             MemberDTO memberDTO = new MemberDTO();
+            memberDTO.setId(member.getId());
             memberDTO.setName(member.getName());
             memberDTO.setEmail(member.getEmail());
             return new ResponseEntity<>(memberDTO, HttpStatus.OK);
@@ -38,5 +39,5 @@ public class MyPageController {
         }
     }
 
-}
 
+}

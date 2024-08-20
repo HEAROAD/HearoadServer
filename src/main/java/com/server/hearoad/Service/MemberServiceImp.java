@@ -3,7 +3,6 @@ package com.server.hearoad.Service;
 import com.server.hearoad.Model.Member;
 import com.server.hearoad.Repository.MemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +20,11 @@ public class MemberServiceImp implements MemberService {
     @Override
     public Member findByEmail(String email){
         return memberRepository.findByEmail(email);
+    }
+
+    @Override
+    public Member findById(String id) {
+        return memberRepository.findById(id).orElse(null);
     }
 
     @Override
