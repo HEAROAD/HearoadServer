@@ -9,6 +9,8 @@ public interface MemberService {
 
     Member findByEmail(String email);
 
+    Member findById(String id);
+
     List<Member> findAllByOrderByNameDesc();
 
     Member saveOrUpdateMember(Member member);

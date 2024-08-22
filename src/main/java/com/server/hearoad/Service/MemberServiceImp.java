@@ -23,12 +23,18 @@ public class MemberServiceImp implements MemberService {
     }
 
     @Override
+    public Member findById(String id) {
+        return memberRepository.findById(id).orElse(null);
+    }
+
+    @Override
     public List<Member> findAllByOrderByNameDesc(){
         return memberRepository.findAllByOrderByNameDesc();
     }
 
     @Override
-    public  Member saveOrUpdateMember(Member member){
+    public Member saveOrUpdateMember(Member member){
+        // 비밀번호 암호화 제거
         return memberRepository.save(member);
     }
 
