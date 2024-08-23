@@ -17,7 +17,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/api/users/register/**", "/api/mypage/info").permitAll()
+                        .requestMatchers("/", "/api/users/register/**", "/api/mypage/info","/api/users/login/page","/v2/user/me", "/callback").permitAll()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable()); // CSRF 비활성화 (개발 중에만 사용)
