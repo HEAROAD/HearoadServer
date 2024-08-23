@@ -24,5 +24,4 @@ public class KakaoTokenResponseDto {
     public Integer refreshTokenExpiresIn;
     @JsonProperty("scope")
     public String scope;
-
 }
