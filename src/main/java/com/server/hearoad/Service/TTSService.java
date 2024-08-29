@@ -9,33 +9,39 @@ import software.amazon.awssdk.services.polly.model.VoiceId;
 
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.stereotype.Service;
+
 @Service
 public class TTSService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TTSService.class);
     private final PollyClient polly;
 
     public TTSService() {
-        // Polly 클라이언트 초기화
         this.polly = PollyClient.builder()
-                .region(Region.US_EAST_1)  // AWS 리전 설정
+                .region(Region.US_EAST_1)
                 .credentialsProvider(ProfileCredentialsProvider.create())
                 .build();
     }
 
-    public String synthesizeSpeechToFile(String text, String outputFileName) {
+    public String synthesizeSpeechToFile(String text, String outputDir) {
+        String outputFileName = outputDir + "/" + UUID.randomUUID() + ".mp3";
+
         try {
+            logger.info("TTS 요청: " + text);
+
             SynthesizeSpeechRequest synthReq = SynthesizeSpeechRequest.builder()
                     .text(text)
                     .voiceId(VoiceId.JOANNA)
                     .outputFormat(OutputFormat.MP3)
                     .build();
 
-            // Polly에서 음성 생성
             SynthesizeSpeechResponse synthRes = polly.synthesizeSpeech(synthReq);
 
-            // MP3 파일로 저장
             try (InputStream in = synthRes.audioStream();
                  FileOutputStream out = new FileOutputStream(outputFileName)) {
 
@@ -46,15 +52,16 @@ public class TTSService {
                     out.write(buffer, 0, readBytes);
                 }
 
+                logger.info("MP3 파일 생성: " + outputFileName);
                 return outputFileName;
 
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("파일 저장 실패", e);
                 return null;
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("TTS 실패", e);
             return null;
         }
     }
