@@ -1,4 +1,5 @@
 package com.server.hearoad.Service;
+
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.polly.PollyClient;
@@ -6,13 +7,14 @@ import software.amazon.awssdk.services.polly.model.SynthesizeSpeechRequest;
 import software.amazon.awssdk.services.polly.model.SynthesizeSpeechResponse;
 import software.amazon.awssdk.services.polly.model.OutputFormat;
 import software.amazon.awssdk.services.polly.model.VoiceId;
+import software.amazon.awssdk.core.ResponseInputStream;
 
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.stereotype.Service;
 
 @Service
@@ -40,9 +42,10 @@ public class TTSService {
                     .outputFormat(OutputFormat.MP3)
                     .build();
 
-            SynthesizeSpeechResponse synthRes = polly.synthesizeSpeech(synthReq);
+            ResponseInputStream<SynthesizeSpeechResponse> synthRes = polly.synthesizeSpeech(synthReq);
 
-            try (InputStream in = synthRes.audioStream();
+            // MP3 파일로 저장
+            try (InputStream in = synthRes;
                  FileOutputStream out = new FileOutputStream(outputFileName)) {
 
                 byte[] buffer = new byte[2 * 1024];

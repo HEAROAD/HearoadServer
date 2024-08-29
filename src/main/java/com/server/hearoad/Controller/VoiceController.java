@@ -1,15 +1,12 @@
 package com.server.hearoad.Controller;
 
+import com.server.hearoad.DTO.TTSResponse;
 import com.server.hearoad.DTO.TTSFile;
-import com.server.hearoad.Repository.TTSFileRepository;
 import com.server.hearoad.Service.TTSService;
+import com.server.hearoad.Repository.TTSFileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/voice")
@@ -24,7 +21,7 @@ public class VoiceController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(
+    public ResponseEntity<?> uploadFile(
             @RequestParam("word") String word,
             @RequestParam("emoji") String emoji
     ) {
@@ -35,15 +32,18 @@ public class VoiceController {
         String mp3FilePath = ttsService.synthesizeSpeechToFile(word, "/path/to/save");
 
         if (mp3FilePath == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("MP3파일을 생성하는데 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("MP3 파일을 생성하는데 실패했습니다.");
         }
+
+        // MongoDB에 저장
         TTSFile ttsFile = new TTSFile();
         ttsFile.setWord(word);
         ttsFile.setEmoji(emoji);
         ttsFile.setFilePath(mp3FilePath);
         ttsFileRepository.save(ttsFile);
 
-        return ResponseEntity.ok("MP3 파일이 생성되었습니다: " + mp3FilePath + " | 이모지: " + emoji);
+        // JSON 응답 반환
+        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", mp3FilePath, emoji);
+        return ResponseEntity.ok(response);
     }
-
 }
