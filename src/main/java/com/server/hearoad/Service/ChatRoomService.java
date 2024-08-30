@@ -43,26 +43,4 @@ public class ChatRoomService {
             chatRoomRepository.save(chatRoom);
         }
     }
-
-    public ChatMessage processMessage(ChatMessage chatMessage) {
-        if ("partner".equalsIgnoreCase(chatMessage.getType())) {
-            // 텍스트를 수어로 변환하는 로직
-            chatMessage.setKsl(convertTextToKSL(chatMessage.getMessage()));
-            chatMessage.setText("번역된 글로스"); // 예시
-        } else if ("user".equalsIgnoreCase(chatMessage.getType()) && chatMessage.getKsl() != null) {
-            // 수어 영상을 텍스트로 변환하는 로직
-            chatMessage.setMessage(convertKSLToText(chatMessage.getKsl()));
-        }
-        return chatMessage;
-    }
-
-    private String convertTextToKSL(String message) {
-        // 텍스트를 수어로 변환하는 로직 (API 호출 또는 내부 로직)
-        return "변환된 수어영상";
-    }
-
-    private String convertKSLToText(String ksl) {
-        // 수어 영상을 텍스트로 변환하는 로직 (API 호출 또는 내부 로직)
-        return "번역텍스트";
-    }
 }

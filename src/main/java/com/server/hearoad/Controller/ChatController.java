@@ -55,11 +55,9 @@ public class ChatController {
         }
 
         chatMessage.setType("USER");
-        ChatMessage processedMessage = chatRoomService.processMessage(chatMessage);
-        chatRoomService.addMessageToChatRoom(roomId, processedMessage);
+        chatRoomService.addMessageToChatRoom(roomId, chatMessage);
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 
     private String extractToken(String authorizationHeader) {
         if (authorizationHeader.startsWith("Bearer ")) {
@@ -67,6 +65,4 @@ public class ChatController {
         }
         return null;
     }
-
-
 }
