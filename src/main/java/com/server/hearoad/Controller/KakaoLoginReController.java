@@ -32,7 +32,8 @@ public class KakaoLoginReController {
 
         String jwtToken = jwtTokenUtil.generateToken(userProfile.getId().toString());
 
-        return ResponseEntity.ok(new JwtResponse(jwtToken, userProfile.getNickname()));
+        // 수정된 부분: getNickname()을 getProperties().getNickname()으로 변경
+        return ResponseEntity.ok(new JwtResponse(jwtToken, userProfile.getProperties().getNickname()));
     }
 
     public static class JwtResponse {
