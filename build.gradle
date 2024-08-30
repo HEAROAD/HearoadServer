@@ -24,28 +24,42 @@ repositories {
 }
 
 dependencies {
-	//	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation group: 'org.modelmapper', name:'modelmapper',version:'2.3.8'
+	// ModelMapper for object mapping
+	implementation 'org.modelmapper:modelmapper:2.3.8'
+
+	// MongoDB support
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 	implementation 'org.mongodb:mongodb-driver-sync:5.1.2'
+
+	// Spring Web for building web applications, including RESTful services
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// Lombok to reduce boilerplate code
 	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// Thymeleaf for rendering web pages (e.g., login page)
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	// AWS SDK for Polly and S3 services
 	implementation 'software.amazon.awssdk:polly:2.20.0'
 	implementation 'software.amazon.awssdk:auth:2.20.0'
+	implementation 'software.amazon.awssdk:s3:2.20.0'
 
-	//Webflux
+	// Spring WebFlux for reactive web applications
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-	//thymeleaf - 카카오 로그인 페이지를 위함.
-	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	// MySQL connector (if you plan to use MySQL, otherwise remove)
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.68.Final' // Netty 버전에 맞는 최신 버전으로 수정
+
+	// Spring Boot Test Starter for testing Spring Boot applications
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.71.Final'
 
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
 }
-

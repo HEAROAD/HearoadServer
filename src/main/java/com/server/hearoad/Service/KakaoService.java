@@ -57,7 +57,6 @@ public class KakaoService {
         }
     }
 
-
     public KakaoUserProfileDto getUserProfile(String accessToken) {
         try {
             KakaoUserProfileDto userProfile = WebClient.create(KAUTH_USER_URL_HOST)
@@ -80,7 +79,7 @@ public class KakaoService {
         }
     }
 
-    public void saveOrUpdateUser(KakaoUserProfileDto userProfile) {
+    public User saveOrUpdateUser(KakaoUserProfileDto userProfile) {
         log.info("saveOrUpdateUser method called");
         try {
             String nickname = userProfile.getProperties().getNickname();
@@ -90,22 +89,22 @@ public class KakaoService {
             log.info("User Profile Image: {}", profileImage);
 
             User user = userRepository.findByNickname(nickname)
-                    .orElseGet(() -> new User(
-                            nickname,
-                            profileImage
-                    ));
+                    .orElseGet(() -> new User(nickname, profileImage));
 
             log.info("User found or new user created");
 
             user.setNickname(nickname);
             user.setProfileImage(profileImage);
 
-            userRepository.save(user);
+            User savedUser = userRepository.save(user);
             log.info("User saved successfully.");
+            return savedUser;
         } catch (Exception e) {
             log.error("Error occurred while saving user: ", e);
+            throw new RuntimeException("Failed to save or update user.", e);
         }
     }
+
     public String getUserNicknameFromToken(String accessToken) {
         try {
             KakaoUserProfileDto userProfile = WebClient.create(KAUTH_USER_URL_HOST)
@@ -130,6 +129,5 @@ public class KakaoService {
             return null;
         }
     }
-
 
 }

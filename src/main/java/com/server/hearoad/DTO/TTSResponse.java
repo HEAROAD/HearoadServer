@@ -11,4 +11,5 @@ public class TTSResponse {
     private String message;
     private String filePath;
     private String emoji;
+    private String text;
 }

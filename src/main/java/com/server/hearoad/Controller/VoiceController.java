@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/voice")
 public class VoiceController {
@@ -26,24 +28,35 @@ public class VoiceController {
             @RequestParam("emoji") String emoji
     ) {
         if (word == null || word.isEmpty()) {
-            return ResponseEntity.badRequest().body("단어는 꼭 입력해야 합니다.");
+            return ResponseEntity.badRequest().body("단어는 필수 입력사항입니다.");
         }
 
-        String mp3FilePath = ttsService.synthesizeSpeechToFile(word, "/path/to/save");
+        String publicUrl = ttsService.synthesizeSpeechToFileAndUpload(word, emoji);
 
-        if (mp3FilePath == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("MP3 파일을 생성하는데 실패했습니다.");
+        if (publicUrl == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Mp3파일을 생성하는 데 실패했습니다.");
         }
 
-        // MongoDB에 저장
         TTSFile ttsFile = new TTSFile();
         ttsFile.setWord(word);
         ttsFile.setEmoji(emoji);
-        ttsFile.setFilePath(mp3FilePath);
+        ttsFile.setFilePath(publicUrl);
+        // Remove setting userId
+        // ttsFile.setUserId(userId);
         ttsFileRepository.save(ttsFile);
 
-        // JSON 응답 반환
-        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", mp3FilePath, emoji);
+        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", publicUrl, emoji, word);
         return ResponseEntity.ok(response);
     }
+
+//    @GetMapping("/files")
+//    public ResponseEntity<?> getUserFiles(@RequestParam("userId") String userId) {
+//        List<TTSFile> userFiles = ttsFileRepository.findByUserId(userId);
+//
+//        if (userFiles.isEmpty()) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("해당 사용자의 음성 파일이 존재하지 않습니다.");
+//        }
+//
+//        return ResponseEntity.ok(userFiles);
+//    }
 }

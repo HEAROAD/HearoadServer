@@ -1,20 +1,28 @@
 package com.server.hearoad.Service;
 
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.polly.PollyClient;
 import software.amazon.awssdk.services.polly.model.SynthesizeSpeechRequest;
 import software.amazon.awssdk.services.polly.model.SynthesizeSpeechResponse;
 import software.amazon.awssdk.services.polly.model.OutputFormat;
 import software.amazon.awssdk.services.polly.model.VoiceId;
-import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,19 +30,29 @@ public class TTSService {
 
     private static final Logger logger = LoggerFactory.getLogger(TTSService.class);
     private final PollyClient polly;
+    private final S3Client s3Client;
+
+    @Value("${aws.s3.bucket-name:hearoad}")  // Default bucket name if not provided
+    private String bucketName;
 
     public TTSService() {
         this.polly = PollyClient.builder()
                 .region(Region.US_EAST_1)
-                .credentialsProvider(ProfileCredentialsProvider.create())
+                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                .build();
+
+        this.s3Client = S3Client.builder()
+                .region(Region.US_EAST_1)
+                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .build();
     }
 
-    public String synthesizeSpeechToFile(String text, String outputDir) {
-        String outputFileName = outputDir + "/" + UUID.randomUUID() + ".mp3";
+    public String synthesizeSpeechToFileAndUpload(String text, String emoji) {
+        String outputFileName = UUID.randomUUID().toString() + ".mp3";
+        File outputFile = new File(outputFileName);
 
         try {
-            logger.info("TTS 요청: " + text);
+            logger.info("TTS 요청: " + text + " " + emoji);
 
             SynthesizeSpeechRequest synthReq = SynthesizeSpeechRequest.builder()
                     .text(text)
@@ -44,9 +62,8 @@ public class TTSService {
 
             ResponseInputStream<SynthesizeSpeechResponse> synthRes = polly.synthesizeSpeech(synthReq);
 
-            // MP3 파일로 저장
             try (InputStream in = synthRes;
-                 FileOutputStream out = new FileOutputStream(outputFileName)) {
+                 FileOutputStream out = new FileOutputStream(outputFile)) {
 
                 byte[] buffer = new byte[2 * 1024];
                 int readBytes;
@@ -56,15 +73,35 @@ public class TTSService {
                 }
 
                 logger.info("MP3 파일 생성: " + outputFileName);
-                return outputFileName;
+
+                PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(outputFileName)
+                        // ACL 설정 제거
+                        .build();
+
+                PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, Paths.get(outputFileName));
+
+                logger.info("S3 업로드 완료: " + outputFileName);
+
+                String publicUrl = "https://" + bucketName + ".s3.amazonaws.com/" + outputFileName;
+                return publicUrl;
 
             } catch (Exception e) {
                 logger.error("파일 저장 실패", e);
                 return null;
+            } finally {
+                if (outputFile.exists()) {
+                    if (outputFile.delete()) {
+                        logger.info("로컬 파일 삭제: " + outputFileName);
+                    } else {
+                        logger.warn("로컬 파일 삭제 실패: " + outputFileName);
+                    }
+                }
             }
 
-        } catch (Exception e) {
-            logger.error("TTS 실패", e);
+        } catch (S3Exception e) {
+            logger.error("S3 업로드 실패", e);
             return null;
         }
     }
