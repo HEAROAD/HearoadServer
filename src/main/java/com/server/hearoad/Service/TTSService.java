@@ -1,5 +1,9 @@
 package com.server.hearoad.Service;
 
+import com.server.hearoad.DTO.TTSFile;
+import com.server.hearoad.Model.User;
+import com.server.hearoad.Repository.TTSFileRepository;
+import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.regions.Region;
@@ -11,19 +15,19 @@ import software.amazon.awssdk.services.polly.model.VoiceId;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 @Service
 public class TTSService {
@@ -31,11 +35,18 @@ public class TTSService {
     private static final Logger logger = LoggerFactory.getLogger(TTSService.class);
     private final PollyClient polly;
     private final S3Client s3Client;
+    private final TTSFileRepository ttsFileRepository;
 
-    @Value("${aws.s3.bucket-name:hearoad}")  // Default bucket name if not provided
+    @Value("${aws.s3.bucket-name:hearoad}")
     private String bucketName;
 
-    public TTSService() {
+    private static final List<String> DEFAULT_TTS_FILES = Arrays.asList(
+            "https://hearoad.s3.amazonaws.com/355581f0-cc62-4ec3-b154-a13e29294513.mp3",
+            "https://hearoad.s3.amazonaws.com/b9e2581e-dc58-471f-9c4c-fd823aff8186.mp3",
+            "https://hearoad.s3.amazonaws.com/c976305a-307c-4744-b46e-674f843ab5ec.mp3"
+    );
+
+    public TTSService(TTSFileRepository ttsFileRepository) {
         this.polly = PollyClient.builder()
                 .region(Region.US_EAST_1)
                 .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
@@ -45,6 +56,19 @@ public class TTSService {
                 .region(Region.US_EAST_1)
                 .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .build();
+
+        this.ttsFileRepository = ttsFileRepository;
+    }
+
+    public void generateDefaultFilesForUser(User user) {
+        if (user == null) return;
+
+        for (String url : DEFAULT_TTS_FILES) {
+            TTSFile ttsFile = new TTSFile();
+            ttsFile.setUser(user);
+            ttsFile.setFilePath(url);
+            ttsFileRepository.save(ttsFile);
+        }
     }
 
     public String synthesizeSpeechToFileAndUpload(String text, String emoji) {
@@ -56,7 +80,7 @@ public class TTSService {
 
             SynthesizeSpeechRequest synthReq = SynthesizeSpeechRequest.builder()
                     .text(text)
-                    .voiceId(VoiceId.JOANNA)
+                    .voiceId(VoiceId.SEOYEON)
                     .outputFormat(OutputFormat.MP3)
                     .build();
 
@@ -77,7 +101,6 @@ public class TTSService {
                 PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(outputFileName)
-                        // ACL 설정 제거
                         .build();
 
                 PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, Paths.get(outputFileName));

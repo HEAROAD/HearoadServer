@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -21,6 +20,7 @@ import reactor.core.publisher.Mono;
 public class KakaoService {
 
     private final UserRepository userRepository;
+    private final TTSService ttsService;
 
     @Value("${kakao.client-id}")
     private String clientId;
@@ -82,14 +82,20 @@ public class KakaoService {
     public User saveOrUpdateUser(KakaoUserProfileDto userProfile) {
         log.info("saveOrUpdateUser method called");
         try {
+            String kakaoUserId = String.valueOf(userProfile.getId());
             String nickname = userProfile.getProperties().getNickname();
             String profileImage = userProfile.getProperties().getProfileImage();
 
+            log.info("User ID: {}", kakaoUserId);
             log.info("User Nickname: {}", nickname);
             log.info("User Profile Image: {}", profileImage);
 
-            User user = userRepository.findByNickname(nickname)
-                    .orElseGet(() -> new User(nickname, profileImage));
+            User user = userRepository.findById(kakaoUserId)
+                    .orElseGet(() -> {
+                        User newUser = new User(kakaoUserId, nickname, profileImage);
+                        ttsService.generateDefaultFilesForUser(newUser);
+                        return userRepository.save(newUser);
+                    });
 
             log.info("User found or new user created");
 
@@ -129,5 +135,4 @@ public class KakaoService {
             return null;
         }
     }
-
 }
