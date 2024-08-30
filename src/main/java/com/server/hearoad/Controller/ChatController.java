@@ -19,7 +19,7 @@ public class ChatController {
     private final ChatRoomService chatRoomService;
     private final KakaoService kakaoService;
 
-    @PostMapping("/rooms") //채팅방 만들기
+    @PostMapping("/rooms")
     public ResponseEntity<ChatRoom> createChatRoom(@RequestHeader("Authorization") String authorizationHeader, @RequestParam String title) {
         String accessToken = extractToken(authorizationHeader);
         String nickname = kakaoService.getUserNicknameFromToken(accessToken);
