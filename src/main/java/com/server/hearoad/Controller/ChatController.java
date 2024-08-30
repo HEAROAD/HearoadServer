@@ -1,8 +1,9 @@
 package com.server.hearoad.Controller;
 
+import com.server.hearoad.Model.ChatMessage;
 import com.server.hearoad.Model.ChatRoom;
-import com.server.hearoad.Service.ChatService;
-import jakarta.servlet.http.HttpSession;
+import com.server.hearoad.Service.ChatRoomService;
+import com.server.hearoad.Service.KakaoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,50 +12,61 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/chat")
 @RequiredArgsConstructor
+@RequestMapping("/api/chat")
 public class ChatController {
 
-    private final ChatService chatService;
+    private final ChatRoomService chatRoomService;
+    private final KakaoService kakaoService;
 
-    // 채팅방 생성
-    @PostMapping("/create")
-    public ResponseEntity<ChatRoom> createChatRoom(HttpSession session) {
-        String userId = (String) session.getAttribute("userId");
+    @PostMapping("/rooms")
+    public ResponseEntity<ChatRoom> createChatRoom(@RequestHeader("Authorization") String authorizationHeader, @RequestParam String title) {
+        String accessToken = extractToken(authorizationHeader);
+        String nickname = kakaoService.getUserNicknameFromToken(accessToken);
 
-        if (userId == null) {
-            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        if (nickname == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        ChatRoom chatRoom = chatService.createChatRoom(userId);
+        ChatRoom chatRoom = chatRoomService.createChatRoom(title, nickname);
         return new ResponseEntity<>(chatRoom, HttpStatus.CREATED);
     }
 
-    // 채팅 메시지 추가
-    @PostMapping("/{chatRoomId}/message")
-    public ResponseEntity<ChatRoom> sendMessage(@PathVariable String chatRoomId,
-                                                @RequestParam String message,
-                                                HttpSession session) {
-        String userId = (String) session.getAttribute("userId");
-
-        if (userId == null) {
-            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
-        }
-
-        ChatRoom chatRoom = chatService.addMessageToChatRoom(chatRoomId, userId, message);
-        return new ResponseEntity<>(chatRoom, HttpStatus.OK);
-    }
-
-    // 채팅방 목록 조회
     @GetMapping("/rooms")
-    public ResponseEntity<List<ChatRoom>> getUserChatRooms(HttpSession session) {
-        String userId = (String) session.getAttribute("userId");
-
-        if (userId == null) {
-            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
-        }
-
-        List<ChatRoom> chatRooms = chatService.getUserChatRooms(userId);
+    public ResponseEntity<List<ChatRoom>> getAllChatRooms() {
+        List<ChatRoom> chatRooms = chatRoomService.getAllChatRooms();
         return new ResponseEntity<>(chatRooms, HttpStatus.OK);
     }
+
+    @GetMapping("/rooms/{roomId}")
+    public ResponseEntity<ChatRoom> getChatRoomById(@PathVariable String roomId) {
+        return chatRoomService.getChatRoomById(roomId)
+                .map(chatRoom -> new ResponseEntity<>(chatRoom, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    @PostMapping("/rooms/{roomId}/messages")
+    public ResponseEntity<Void> addMessageToChatRoom(@RequestHeader("Authorization") String authorizationHeader, @PathVariable String roomId, @RequestBody ChatMessage chatMessage) {
+        String accessToken = extractToken(authorizationHeader);
+        String nickname = kakaoService.getUserNicknameFromToken(accessToken);
+
+        if (nickname == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        chatMessage.setType("USER");
+        ChatMessage processedMessage = chatRoomService.processMessage(chatMessage);
+        chatRoomService.addMessageToChatRoom(roomId, processedMessage);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+
+    private String extractToken(String authorizationHeader) {
+        if (authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring(7);
+        }
+        return null;
+    }
+
+
 }
