@@ -54,7 +54,7 @@ public class ChatController {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        chatMessage.setType("USER");
+        // 프론트엔드에서 받은 type 값을 그대로 사용
         chatRoomService.addMessageToChatRoom(roomId, chatMessage);
         return new ResponseEntity<>(HttpStatus.OK);
     }
