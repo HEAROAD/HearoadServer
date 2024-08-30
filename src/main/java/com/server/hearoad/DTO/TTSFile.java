@@ -12,7 +12,6 @@ public class TTSFile {
 
     @Id
     private String id;
-    private String userId;
     private String word;
     private String emoji;
     private String filePath;

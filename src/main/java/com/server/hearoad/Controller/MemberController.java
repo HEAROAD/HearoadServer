@@ -27,7 +27,7 @@ public class MemberController {
             Member member = new Member();
             member.setName(memberDTO.getName());
             member.setEmail(memberDTO.getEmail());
-            member.setPassword(memberDTO.getPassword()); // 평문 비밀번호 그대로 저장
+            member.setPassword(memberDTO.getPassword());
             memberService.saveOrUpdateMember(member);
             return new ResponseEntity<>("Member added successfully", HttpStatus.OK);
         }
@@ -41,7 +41,6 @@ public class MemberController {
         } else if (!memberDTO.getPassword().equals(member.getPassword())) {
             return new ResponseEntity<>("Invalid password", HttpStatus.UNAUTHORIZED);
         } else {
-            // 로그인 성공 시 ID를 세션에 저장
             session.setAttribute("userId", member.getId());
             return new ResponseEntity<>("Login successful", HttpStatus.OK);
         }

@@ -8,6 +8,5 @@ import java.util.List;
 public interface MemberRepository extends MongoRepository<Member, String> {
 
     Member findByEmail(String email);
-
     List<Member> findAllByOrderByNameDesc();
 }

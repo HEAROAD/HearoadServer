@@ -11,10 +11,10 @@ import software.amazon.awssdk.services.polly.model.VoiceId;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.PutObjectAclRequest;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.file.Paths;
@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,7 +31,9 @@ public class TTSService {
     private static final Logger logger = LoggerFactory.getLogger(TTSService.class);
     private final PollyClient polly;
     private final S3Client s3Client;
-    private final String bucketName = "hearoad";
+
+    @Value("${aws.s3.bucket-name:hearoad}")  // Default bucket name if not provided
+    private String bucketName;
 
     public TTSService() {
         this.polly = PollyClient.builder()
@@ -45,7 +48,8 @@ public class TTSService {
     }
 
     public String synthesizeSpeechToFileAndUpload(String text, String emoji) {
-        String outputFileName = UUID.randomUUID() + ".mp3";
+        String outputFileName = UUID.randomUUID().toString() + ".mp3";
+        File outputFile = new File(outputFileName);
 
         try {
             logger.info("TTS 요청: " + text + " " + emoji);
@@ -59,7 +63,7 @@ public class TTSService {
             ResponseInputStream<SynthesizeSpeechResponse> synthRes = polly.synthesizeSpeech(synthReq);
 
             try (InputStream in = synthRes;
-                 FileOutputStream out = new FileOutputStream(outputFileName)) {
+                 FileOutputStream out = new FileOutputStream(outputFile)) {
 
                 byte[] buffer = new byte[2 * 1024];
                 int readBytes;
@@ -70,23 +74,30 @@ public class TTSService {
 
                 logger.info("MP3 파일 생성: " + outputFileName);
 
-                // 파일을 S3에 업로드
                 PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(outputFileName)
+                        // ACL 설정 제거
                         .build();
 
                 PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, Paths.get(outputFileName));
 
                 logger.info("S3 업로드 완료: " + outputFileName);
 
-                // 정적 URL 반환
                 String publicUrl = "https://" + bucketName + ".s3.amazonaws.com/" + outputFileName;
                 return publicUrl;
 
             } catch (Exception e) {
                 logger.error("파일 저장 실패", e);
                 return null;
+            } finally {
+                if (outputFile.exists()) {
+                    if (outputFile.delete()) {
+                        logger.info("로컬 파일 삭제: " + outputFileName);
+                    } else {
+                        logger.warn("로컬 파일 삭제 실패: " + outputFileName);
+                    }
+                }
             }
 
         } catch (S3Exception e) {
