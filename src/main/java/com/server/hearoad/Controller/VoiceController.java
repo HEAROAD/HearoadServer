@@ -29,7 +29,7 @@ public class VoiceController {
             return ResponseEntity.badRequest().body("단어는 필수 입력사항입니다.");
         }
 
-        String publicUrl = ttsService.synthesizeSpeechToFileAndUpload(word);
+        String publicUrl = ttsService.synthesizeSpeechToFileAndUpload(word, emoji);
 
         if (publicUrl == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Mp3파일을 생성하는 데 실패했습니다.");
@@ -41,7 +41,7 @@ public class VoiceController {
         ttsFile.setFilePath(publicUrl);
         ttsFileRepository.save(ttsFile);
 
-        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", publicUrl, emoji);
+        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", publicUrl, emoji, word); // 'word'를 'text' 필드에 추가
         return ResponseEntity.ok(response);
     }
 }

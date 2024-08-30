@@ -1,6 +1,6 @@
 package com.server.hearoad.Service;
 
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.polly.PollyClient;
@@ -35,20 +35,20 @@ public class TTSService {
     public TTSService() {
         this.polly = PollyClient.builder()
                 .region(Region.US_EAST_1)
-                .credentialsProvider(ProfileCredentialsProvider.create())
+                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .build();
 
         this.s3Client = S3Client.builder()
                 .region(Region.US_EAST_1)
-                .credentialsProvider(ProfileCredentialsProvider.create())
+                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .build();
     }
 
-    public String synthesizeSpeechToFileAndUpload(String text) {
+    public String synthesizeSpeechToFileAndUpload(String text, String emoji) {
         String outputFileName = UUID.randomUUID() + ".mp3";
 
         try {
-            logger.info("TTS 요청: " + text);
+            logger.info("TTS 요청: " + text + " " + emoji);
 
             SynthesizeSpeechRequest synthReq = SynthesizeSpeechRequest.builder()
                     .text(text)
@@ -70,7 +70,7 @@ public class TTSService {
 
                 logger.info("MP3 파일 생성: " + outputFileName);
 
-                // upload
+                // 파일을 S3에 업로드
                 PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(outputFileName)
@@ -79,13 +79,6 @@ public class TTSService {
                 PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, Paths.get(outputFileName));
 
                 logger.info("S3 업로드 완료: " + outputFileName);
-
-                // 파일을 퍼블릭으로 설정 - url접근 시간 많이 해주려고
-                s3Client.putObjectAcl(PutObjectAclRequest.builder()
-                        .bucket(bucketName)
-                        .key(outputFileName)
-                        .acl(ObjectCannedACL.PUBLIC_READ)
-                        .build());
 
                 // 정적 URL 반환
                 String publicUrl = "https://" + bucketName + ".s3.amazonaws.com/" + outputFileName;
