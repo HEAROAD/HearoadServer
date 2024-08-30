@@ -1,55 +1,40 @@
 package com.server.hearoad.Controller;
 
-import com.server.hearoad.DTO.VoiceAnalysisResponse;
-import com.server.hearoad.Model.VoiceAnalysisResult;
-import com.server.hearoad.Repository.VoiceAnalysisResultRepository;
-import com.server.hearoad.Service.KakaoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.reactive.function.client.WebClient;
 
-
-import java.io.*;
-import java.nio.file.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @RestController
 @RequestMapping("/analyze")
 public class VoiceAnalysisController {
 
     @Autowired
-    private KakaoService kakaoService;
-
-    @Autowired
-    private VoiceAnalysisResultRepository voiceAnalysisResultRepository;
+    private WebClient.Builder webClientBuilder;
 
     @PostMapping("/voice")
-    public ResponseEntity<?> analyzeVoice(@RequestParam("file") MultipartFile file,
-                                          @RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<?> analyzeVoice(@RequestParam("file") MultipartFile file) {
         try {
-            // Authorization 헤더에서 Bearer 토큰 추출
-            if (!authorizationHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("잘못된 인증 형식입니다.");
-            }
-            String accessToken = authorizationHeader.substring(7);
-
-            // KakaoService를 통해 사용자 닉네임 가져오기
-            String nickname = kakaoService.getUserNicknameFromToken(accessToken);
-            if (nickname == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("잘못된 액세스 토큰입니다.");
-            }
-
-            // 파일을 임시 디렉토리에 저장
-            Path tempFile = Files.createTempFile("voice_", ".mp3");
+            // 업로드된 파일을 임시 디렉토리에 저장
+            Path tempFile = Files.createTempFile("voice_", ".m4a");
             file.transferTo(tempFile.toFile());
 
-            // Python 스크립트 실행
-            ProcessBuilder pb = new ProcessBuilder("python", "scripts/analyze_voice.py", tempFile.toString());
+            // FFmpeg를 사용하여 m4a 파일을 mp3로 변환
+            Path mp3File = Files.createTempFile("voice_", ".mp3");
+            ProcessBuilder pb = new ProcessBuilder("ffmpeg", "-i", tempFile.toString(), mp3File.toString());
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
+            // FFmpeg 프로세스 출력 로그 확인
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             StringBuilder result = new StringBuilder();
             String line;
@@ -59,24 +44,30 @@ public class VoiceAnalysisController {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                // 오류 메시지 로그에 기록
-                System.err.println("Python 스크립트 실행 오류: " + result.toString());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("음성 파일 처리 중 오류가 발생했습니다.");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("FFmpeg 처리 중 오류가 발생했습니다.");
             }
 
-            // 결과를 JSON으로 변환
-            ObjectMapper objectMapper = new ObjectMapper();
-            VoiceAnalysisResponse response = objectMapper.readValue(result.toString(), VoiceAnalysisResponse.class);
-
-            // 캐릭터와 닉네임을 데이터베이스에 저장
-            VoiceAnalysisResult analysisResult = new VoiceAnalysisResult(nickname, response.getCharacter());
-            voiceAnalysisResultRepository.save(analysisResult);
-
-            // 응답 반환
-            return ResponseEntity.ok(response);
+            // FastAPI로 변환된 mp3 파일 전송
+            String fastApiResponse = sendFileToFastApi(mp3File);
+            return ResponseEntity.ok(fastApiResponse);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("음성 분석 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 처리 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
+
+    private String sendFileToFastApi(Path mp3File) {
+        WebClient webClient = webClientBuilder.build();
+
+        FileSystemResource resource = new FileSystemResource(mp3File.toFile());
+
+        return webClient.post()
+                .uri("http://your-backend-url.com/analyze")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(resource)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
 }
+
