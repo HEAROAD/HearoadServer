@@ -24,7 +24,6 @@ public class MemberController {
         if (existingMember != null) {
             return new ResponseEntity<>("This Email already exists", HttpStatus.BAD_REQUEST);
         } else {
-            // 비밀번호를 암호화하지 않고 그대로 저장
             Member member = new Member();
             member.setName(memberDTO.getName());
             member.setEmail(memberDTO.getEmail());
