@@ -2,6 +2,7 @@ package com.server.hearoad.Controller;
 
 import com.server.hearoad.DTO.TTSResponse;
 import com.server.hearoad.DTO.TTSFile;
+import com.server.hearoad.Repository.UserRepository;
 import com.server.hearoad.Service.TTSService;
 import com.server.hearoad.Service.KakaoService;
 import com.server.hearoad.Repository.TTSFileRepository;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/voice")
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class VoiceController {
     private final TTSService ttsService;
     private final TTSFileRepository ttsFileRepository;
     private final KakaoService kakaoService;
+    private final UserRepository userRepository;
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(
@@ -62,26 +66,18 @@ public class VoiceController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/files")
+    public ResponseEntity<List<TTSFile>> getUserFiles(@RequestHeader("Authorization") String accessToken) {
+        String token = accessToken.replace("Bearer ", "");
 
-// 사용자의 MP3 파일을 조회하는 API
-//    @GetMapping("/files")
-//    public ResponseEntity<List<TTSFile>> getUserFiles(@RequestParam("userId") String userId) {
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-//
-//        List<TTSFile> userFiles = ttsFileRepository.findAllByUser(user);
-//
-//        if (userFiles.size() < 3) {
-//            // 기본 파일 생성 및 저장 (여기서는 생략됨)
-//            generateDefaultFilesForUser(user);
-//            userFiles = ttsFileRepository.findAllByUser(user);
-//        }
-//
-//        return ResponseEntity.ok(userFiles);
-//    }
-//
-//    private void generateDefaultFilesForUser(User user) {
-//        // 기본 TTS 파일을 생성하고 저장하는 로직을 구현하세요.
-//    }
+        String kakaoUserId = String.valueOf(kakaoService.getUserProfile(token).getId());
+
+        User user = userRepository.findById(kakaoUserId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        List<TTSFile> userFiles = ttsFileRepository.findByUser(user);
+
+        return ResponseEntity.ok(userFiles);
+    }
 
 }

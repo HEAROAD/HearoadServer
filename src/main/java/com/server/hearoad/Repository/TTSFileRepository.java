@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 public interface TTSFileRepository extends MongoRepository<TTSFile, String> {
-    List<TTSFile> findAllByUser(User user);
+    List<TTSFile> findByUser(User user);
 }
