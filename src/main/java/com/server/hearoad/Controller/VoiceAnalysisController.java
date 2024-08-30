@@ -11,11 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.nio.file.*;
@@ -64,6 +59,8 @@ public class VoiceAnalysisController {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
+                // 오류 메시지 로그에 기록
+                System.err.println("Python 스크립트 실행 오류: " + result.toString());
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("음성 파일 처리 중 오류가 발생했습니다.");
             }
 

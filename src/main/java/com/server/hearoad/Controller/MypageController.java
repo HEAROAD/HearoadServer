@@ -40,7 +40,7 @@ public class MypageController {
 
         // 데이터베이스에서 음성 분석 결과 찾기
         Optional<VoiceAnalysisResult> optionalResult = voiceAnalysisResultRepository.findByNickname(nickname);
-        String character = optionalResult.map(VoiceAnalysisResult::getCharacter).orElse(null);
+        String character = optionalResult.map(VoiceAnalysisResult::getCharacter).orElse("히로");
 
         // 응답 객체 생성
         VoiceAnalysisResponse response = new VoiceAnalysisResponse();
