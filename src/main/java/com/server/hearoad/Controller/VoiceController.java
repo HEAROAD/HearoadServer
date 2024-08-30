@@ -26,24 +26,22 @@ public class VoiceController {
             @RequestParam("emoji") String emoji
     ) {
         if (word == null || word.isEmpty()) {
-            return ResponseEntity.badRequest().body("단어는 꼭 입력해야 합니다.");
+            return ResponseEntity.badRequest().body("단어는 필수 입력사항입니다.");
         }
 
-        String mp3FilePath = ttsService.synthesizeSpeechToFile(word, "/path/to/save");
+        String publicUrl = ttsService.synthesizeSpeechToFileAndUpload(word);
 
-        if (mp3FilePath == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("MP3 파일을 생성하는데 실패했습니다.");
+        if (publicUrl == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Mp3파일을 생성하는 데 실패했습니다.");
         }
 
-        // MongoDB에 저장
         TTSFile ttsFile = new TTSFile();
         ttsFile.setWord(word);
         ttsFile.setEmoji(emoji);
-        ttsFile.setFilePath(mp3FilePath);
+        ttsFile.setFilePath(publicUrl);
         ttsFileRepository.save(ttsFile);
 
-        // JSON 응답 반환
-        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", mp3FilePath, emoji);
+        TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", publicUrl, emoji);
         return ResponseEntity.ok(response);
     }
 }
