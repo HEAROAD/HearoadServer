@@ -80,4 +80,34 @@ public class VoiceController {
         return ResponseEntity.ok(userFiles);
     }
 
+    @DeleteMapping("/delete/{fileId}")
+    public ResponseEntity<?> deleteUserFile(
+            @PathVariable String fileId,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String accessToken
+    ) {
+        String token = accessToken.replace("Bearer ", "");
+
+        String kakaoUserId = String.valueOf(kakaoService.getUserProfile(token).getId());
+
+        User user = userRepository.findById(kakaoUserId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        TTSFile ttsFile = ttsFileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));
+
+        if (!ttsFile.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 파일을 삭제할 권한이 없습니다.");
+        }
+
+        boolean isDeletedFromS3 = ttsService.deleteFileFromS3(ttsFile.getFilePath());
+        if (!isDeletedFromS3) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("S3에서 파일 삭제에 실패했습니다.");
+        }
+
+        // 데이터베이스에서 파일 삭제
+        ttsFileRepository.delete(ttsFile);
+
+        return ResponseEntity.ok("파일이 성공적으로 삭제되었습니다.");
+    }
+
 }

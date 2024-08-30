@@ -13,9 +13,7 @@ import software.amazon.awssdk.services.polly.model.SynthesizeSpeechResponse;
 import software.amazon.awssdk.services.polly.model.OutputFormat;
 import software.amazon.awssdk.services.polly.model.VoiceId;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -76,7 +74,7 @@ public class TTSService {
         File outputFile = new File(outputFileName);
 
         try {
-            logger.info("TTS 요청: " + text + " " + emoji);
+            logger.info("TTS 요청: {} {}", text, emoji);
 
             SynthesizeSpeechRequest synthReq = SynthesizeSpeechRequest.builder()
                     .text(text)
@@ -86,8 +84,7 @@ public class TTSService {
 
             ResponseInputStream<SynthesizeSpeechResponse> synthRes = polly.synthesizeSpeech(synthReq);
 
-            try (InputStream in = synthRes;
-                 FileOutputStream out = new FileOutputStream(outputFile)) {
+            try (InputStream in = synthRes; FileOutputStream out = new FileOutputStream(outputFile)) {
 
                 byte[] buffer = new byte[2 * 1024];
                 int readBytes;
@@ -96,36 +93,49 @@ public class TTSService {
                     out.write(buffer, 0, readBytes);
                 }
 
-                logger.info("MP3 파일 생성: " + outputFileName);
+                logger.info("MP3 파일 생성: {}", outputFileName);
 
                 PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(outputFileName)
                         .build();
 
-                PutObjectResponse putObjectResponse = s3Client.putObject(putObjectRequest, Paths.get(outputFileName));
+                s3Client.putObject(putObjectRequest, Paths.get(outputFileName));
 
-                logger.info("S3 업로드 완료: " + outputFileName);
+                logger.info("S3 업로드 완료: {}", outputFileName);
 
-                String publicUrl = "https://" + bucketName + ".s3.amazonaws.com/" + outputFileName;
-                return publicUrl;
+                return "https://" + bucketName + ".s3.amazonaws.com/" + outputFileName;
 
             } catch (Exception e) {
                 logger.error("파일 저장 실패", e);
                 return null;
             } finally {
-                if (outputFile.exists()) {
-                    if (outputFile.delete()) {
-                        logger.info("로컬 파일 삭제: " + outputFileName);
-                    } else {
-                        logger.warn("로컬 파일 삭제 실패: " + outputFileName);
-                    }
+                if (outputFile.exists() && !outputFile.delete()) {
+                    logger.warn("로컬 파일 삭제 실패: {}", outputFileName);
                 }
             }
 
         } catch (S3Exception e) {
             logger.error("S3 업로드 실패", e);
             return null;
+        }
+    }
+
+    public boolean deleteFileFromS3(String filePath) {
+        try {
+            String key = filePath.substring(filePath.lastIndexOf("/") + 1);
+
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            s3Client.deleteObject(deleteObjectRequest);
+            logger.info("S3에서 파일 삭제: {}", filePath);
+            return true;
+        } catch (S3Exception e) {
+            logger.error("S3에서 파일 삭제 실패: {}", filePath, e);
+            return false;
         }
     }
 }
