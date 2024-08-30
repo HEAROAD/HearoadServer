@@ -104,4 +104,30 @@ public class KakaoService {
             throw new RuntimeException("Failed to save or update user.", e);
         }
     }
+
+    public String getUserNicknameFromToken(String accessToken) {
+        try {
+            KakaoUserProfileDto userProfile = WebClient.create(KAUTH_USER_URL_HOST)
+                    .get()
+                    .uri("/v2/user/me")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), clientResponse -> {
+                        log.error("Failed to retrieve user profile from Kakao. Status: {}", clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("Failed to retrieve user profile from Kakao."));
+                    })
+                    .bodyToMono(KakaoUserProfileDto.class)
+                    .block();
+
+            if (userProfile != null && userProfile.getProperties() != null) {
+                return userProfile.getProperties().getNickname();
+            }
+
+            return null;
+        } catch (WebClientResponseException e) {
+            log.error("Error while retrieving user profile: {}", e.getMessage());
+            return null;
+        }
+    }
+
 }
