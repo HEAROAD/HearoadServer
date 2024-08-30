@@ -18,6 +18,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/", "/api/users/register/**", "/api/mypage/info","/api/users/login/page","/v2/user/me", "/callback").permitAll()
+                        .requestMatchers("/api/chat/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable()); // CSRF 비활성화 (개발 중에만 사용)
