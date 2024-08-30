@@ -19,7 +19,7 @@ public class ChatController {
     private final ChatRoomService chatRoomService;
     private final KakaoService kakaoService;
 
-    @PostMapping("/rooms")
+    @PostMapping("/rooms") //채팅방 만들기
     public ResponseEntity<ChatRoom> createChatRoom(@RequestHeader("Authorization") String authorizationHeader, @RequestParam String title) {
         String accessToken = extractToken(authorizationHeader);
         String nickname = kakaoService.getUserNicknameFromToken(accessToken);
@@ -32,20 +32,20 @@ public class ChatController {
         return new ResponseEntity<>(chatRoom, HttpStatus.CREATED);
     }
 
-    @GetMapping("/rooms")
+    @GetMapping("/rooms") //채팅방 리스트 반환
     public ResponseEntity<List<ChatRoom>> getAllChatRooms() {
         List<ChatRoom> chatRooms = chatRoomService.getAllChatRooms();
         return new ResponseEntity<>(chatRooms, HttpStatus.OK);
     }
 
-    @GetMapping("/rooms/{roomId}")
+    @GetMapping("/rooms/{roomId}") //채팅 반환
     public ResponseEntity<ChatRoom> getChatRoomById(@PathVariable String roomId) {
         return chatRoomService.getChatRoomById(roomId)
                 .map(chatRoom -> new ResponseEntity<>(chatRoom, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    @PostMapping("/rooms/{roomId}/messages")
+    @PostMapping("/rooms/{roomId}/messages") //메시지 보내기
     public ResponseEntity<Void> addMessageToChatRoom(@RequestHeader("Authorization") String authorizationHeader, @PathVariable String roomId, @RequestBody ChatMessage chatMessage) {
         String accessToken = extractToken(authorizationHeader);
         String nickname = kakaoService.getUserNicknameFromToken(accessToken);
@@ -54,7 +54,7 @@ public class ChatController {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        // 프론트엔드에서 받은 type 값을 그대로 사용
+        // 프론트엔드에서 user/partner 구분
         chatRoomService.addMessageToChatRoom(roomId, chatMessage);
         return new ResponseEntity<>(HttpStatus.OK);
     }
