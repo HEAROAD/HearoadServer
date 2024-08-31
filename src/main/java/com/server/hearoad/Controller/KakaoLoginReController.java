@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -21,10 +20,16 @@ public class KakaoLoginReController {
     private final KakaoService kakaoService;
 
     @GetMapping("/callback")
-    public ResponseEntity<?> callback(@RequestParam("code") String code) {
+    public ResponseEntity<?> callback(
+            @RequestParam("client_id") String clientId,
+            @RequestParam("code") String code) {
+
         log.info("Callback endpoint hit with code: {}", code);
-        String accessToken = kakaoService.getAccessTokenFromKakao(code);
+
+        String accessToken = kakaoService.getAccessTokenFromKakao(clientId, code);
+
         KakaoUserProfileDto userProfile = kakaoService.getUserProfile(accessToken);
+
         kakaoService.saveOrUpdateUser(userProfile);
 
         return new ResponseEntity<>(HttpStatus.OK);

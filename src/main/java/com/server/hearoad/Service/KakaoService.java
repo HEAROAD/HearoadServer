@@ -7,7 +7,6 @@ import com.server.hearoad.Repository.UserRepository;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -22,15 +21,13 @@ public class KakaoService {
     private final UserRepository userRepository;
     private final TTSService ttsService;
 
-    @Value("${kakao.client-id}")
-    private String clientId;
-
     private final WebClient webClient = WebClient.create();
 
     private final String KAUTH_TOKEN_URL_HOST = "https://kauth.kakao.com";
     private final String KAUTH_USER_URL_HOST = "https://kapi.kakao.com";
 
-    public String getAccessTokenFromKakao(String code) {
+    // clientId를 메서드 매개변수로 받도록 수정
+    public String getAccessTokenFromKakao(String clientId, String code) {
         try {
             KakaoTokenResponseDto kakaoTokenResponseDto = WebClient.create(KAUTH_TOKEN_URL_HOST)
                     .post()
