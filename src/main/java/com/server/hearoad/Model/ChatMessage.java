@@ -10,8 +10,10 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class ChatMessage {
-    private String type;
-    private String message;
-    private String ksl;
+
+    private String type; // "USER" or "PARTNER"
+    private String message; // 텍스트 메시지
+    private String ksl; // 수어 영상 (URL 또는 데이터)
+    private String imageUrl; // Image URL
     private LocalDateTime timestamp;
 }

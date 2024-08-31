@@ -58,6 +58,9 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.71.Final'
 
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+	implementation 'org.apache.commons:commons-lang3:3.12.0'
+
 }
 
 tasks.named('test') {

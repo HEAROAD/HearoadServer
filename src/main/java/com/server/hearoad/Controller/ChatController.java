@@ -3,12 +3,15 @@ package com.server.hearoad.Controller;
 import com.server.hearoad.Model.ChatMessage;
 import com.server.hearoad.Model.ChatRoom;
 import com.server.hearoad.Service.ChatRoomService;
+import com.server.hearoad.Service.FileStorageService;
 import com.server.hearoad.Service.KakaoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -18,6 +21,7 @@ public class ChatController {
 
     private final ChatRoomService chatRoomService;
     private final KakaoService kakaoService;
+    private final FileStorageService fileStorageService;
 
     @PostMapping("/rooms")
     public ResponseEntity<ChatRoom> createChatRoom(@RequestHeader("Authorization") String authorizationHeader, @RequestParam String title) {
@@ -45,8 +49,13 @@ public class ChatController {
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    @PostMapping("/rooms/{roomId}/messages") //메시지 보내기
-    public ResponseEntity<Void> addMessageToChatRoom(@RequestHeader("Authorization") String authorizationHeader, @PathVariable String roomId, @RequestBody ChatMessage chatMessage) {
+    @PostMapping("/rooms/{roomId}/messages")
+    public ResponseEntity<Void> addMessageToChatRoom(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @PathVariable String roomId,
+            @RequestParam("message") String message,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+
         String accessToken = extractToken(authorizationHeader);
         String nickname = kakaoService.getUserNicknameFromToken(accessToken);
 
@@ -54,7 +63,17 @@ public class ChatController {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
-        // 프론트엔드에서 user/partner 구분
+        ChatMessage chatMessage = new ChatMessage();
+        chatMessage.setMessage(message);
+        chatMessage.setType("USER"); // 또는 "PARTNER" - 로직에 따라 구분
+        chatMessage.setTimestamp(LocalDateTime.now());
+
+        if (file != null && !file.isEmpty()) {
+            // 파일 업로드 처리
+            String imageUrl = fileStorageService.storeFile(file); // 파일을 저장하고 URL을 반환하는 서비스 구현 필요
+            chatMessage.setImageUrl(imageUrl);
+        }
+
         chatRoomService.addMessageToChatRoom(roomId, chatMessage);
         return new ResponseEntity<>(HttpStatus.OK);
     }
