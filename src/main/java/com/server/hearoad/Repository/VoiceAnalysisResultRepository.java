@@ -1,11 +1,10 @@
 package com.server.hearoad.Repository;
 
 import com.server.hearoad.Model.VoiceAnalysisResult;
-import org.springframework.data.mongodb.repository.MongoRepository;
-
-import java.util.Optional;
+import org.springframework.data.mongodb.repository.MongoRepository;import java.util.List;
 
 public interface VoiceAnalysisResultRepository extends MongoRepository<VoiceAnalysisResult, String> {
-    Optional<VoiceAnalysisResult> findByNickname(String nickname);
+    List<VoiceAnalysisResult> findByNickname(String nickname);
 }
+
 

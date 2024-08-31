@@ -1,5 +1,6 @@
 package com.server.hearoad.Controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.server.hearoad.DTO.VoiceAnalysisResponse;
 import com.server.hearoad.Model.VoiceAnalysisResult;
 import com.server.hearoad.Repository.VoiceAnalysisResultRepository;
@@ -8,11 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 
-import java.util.Optional;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/api/users")
@@ -39,8 +41,15 @@ public class MypageController {
         }
 
         // 데이터베이스에서 음성 분석 결과 찾기
-        Optional<VoiceAnalysisResult> optionalResult = voiceAnalysisResultRepository.findByNickname(nickname);
-        String character = optionalResult.map(VoiceAnalysisResult::getCharacter).orElse("히로");
+        List<VoiceAnalysisResult> results = voiceAnalysisResultRepository.findByNickname(nickname);
+
+        // 가장 최신의 결과를 선택
+        String character = "히로";
+        if (!results.isEmpty()) {
+            // JSON 응답에서 character 필드만 추출
+            String fastApiResponse = results.get(results.size() - 1).getCharacter();
+            character = extractCharacterFromJson(fastApiResponse);
+        }
 
         // 응답 객체 생성
         VoiceAnalysisResponse response = new VoiceAnalysisResponse();
@@ -49,5 +58,16 @@ public class MypageController {
 
         // 응답 반환
         return ResponseEntity.ok(response);
+    }
+
+    private String extractCharacterFromJson(String json) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, Object> responseMap = objectMapper.readValue(json, Map.class);
+            return responseMap.get("character").toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "히로";
+        }
     }
 }

@@ -3,7 +3,7 @@ package com.server.hearoad.DTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "nickname", "character" })  // 필드 순서 지정
+@JsonPropertyOrder({ "nickname", "character" })
 public class VoiceAnalysisResponse {
 
     @JsonProperty("character")
