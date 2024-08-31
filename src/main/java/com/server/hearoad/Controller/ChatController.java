@@ -49,7 +49,7 @@ public class ChatController {
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    @PostMapping("/rooms/{roomId}/messages")
+    @PostMapping("/rooms/{roomId}/messages") // 메세지 보내기
     public ResponseEntity<Void> addMessageToChatRoom(
             @RequestHeader("Authorization") String authorizationHeader,
             @PathVariable String roomId,
