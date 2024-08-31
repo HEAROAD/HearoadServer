@@ -1,8 +1,10 @@
 package com.server.hearoad.DTO;
 
+import com.server.hearoad.Model.User;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Getter
@@ -15,4 +17,7 @@ public class TTSFile {
     private String word;
     private String emoji;
     private String filePath;
+
+    @DBRef
+    private User user;
 }
