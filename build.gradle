@@ -49,18 +49,30 @@ dependencies {
 	// Spring WebFlux for reactive web applications
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-	// MySQL connector (if you plan to use MySQL, otherwise remove)
-	runtimeOnly 'com.mysql:mysql-connector-j'
-	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.68.Final' // Netty 버전에 맞는 최신 버전으로 수정
-
 	// Spring Boot Test Starter for testing Spring Boot applications
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.71.Final'
 
+	// JSON 관련 라이브러리
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	implementation 'org.apache.commons:commons-lang3:3.12.0'
 
+	// Spring Security
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// OAuth2 Client
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+	// JWT Support
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
+	implementation 'io.jsonwebtoken:jjwt-impl:0.11.2'
+	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.2'  // jackson 사용 시
+
+	// Validation Support (선택적)
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Netty MacOS 관련 의존성 (운영체제에 따라)
+	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.71.Final'
 }
 
 tasks.named('test') {
