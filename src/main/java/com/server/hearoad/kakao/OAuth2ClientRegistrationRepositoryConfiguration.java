@@ -30,7 +30,6 @@ public class OAuth2ClientRegistrationRepositoryConfiguration {
     public InMemoryClientRegistrationRepository clientRegistrationRepository() {
         List<ClientRegistration> registrations = new ArrayList<>();
 
-        // properties를 이용해 클라이언트 등록을 만듦
         Map<String, OAuth2ClientProperties.Registration> registrationsMap = properties.getRegistration();
         registrationsMap.forEach((key, registration) -> {
             ClientRegistration clientRegistration = ClientRegistration.withRegistrationId(key)
@@ -57,5 +56,4 @@ public class OAuth2ClientRegistrationRepositoryConfiguration {
         }
         return new ClientAuthenticationMethod("basic");
     }
-
 }

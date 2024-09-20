@@ -14,7 +14,7 @@ public class LoginResponse {
     private String accessToken;
     private String refreshToken;
 
-    public LoginResponse(User user, String accessToken, String refreshToken){
+    public LoginResponse(User user, String accessToken, String refreshToken) {
         this.id = user.getId();
         this.name = user.getName();
         this.nickName = user.getNickName();
@@ -23,4 +23,3 @@ public class LoginResponse {
         this.refreshToken = refreshToken;
     }
 }
-

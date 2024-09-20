@@ -30,8 +30,6 @@ public class User {
     private String nickName;
     private String kakaoAccessToken;
     private String kakaoRefreshToken;
-    private String cloudEmail;
-    private String calenderEmail;
     private LocalDateTime kakaoUpdate;
     private List<String> calenderList = new ArrayList<>();
     private String role;  // Role 필드 추가

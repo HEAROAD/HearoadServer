@@ -6,6 +6,7 @@ public class KakaoUserInfo extends Oauth2UserInfo {
     public KakaoUserInfo(Map<String, Object> attributes) {
         super(attributes);
     }
+
     @Override
     public Long getId() {
         return Long.parseLong(String.valueOf(attributes.get("id")));
@@ -13,23 +14,23 @@ public class KakaoUserInfo extends Oauth2UserInfo {
 
     @Override
     public String getName() {
-        return (String) getKakaoAccount().get("name");
+        return getKakaoAccount().get("name") != null ? (String) getKakaoAccount().get("name") : "No Name";  // null 체크 추가
     }
 
     @Override
     public String getNickName() {
-        return (String) getProfile().get("nickname");
-    }
-    public Map<String, Object> getKakaoAccount(){
-        return(Map<String, Object>) attributes.get("kakao_account");
+        return getProfile().get("nickname") != null ? (String) getProfile().get("nickname") : "No Nickname";  // null 체크 추가
     }
 
-    public Map<String, Object> getProfile(){
+    public Map<String, Object> getKakaoAccount() {
+        return (Map<String, Object>) attributes.get("kakao_account");
+    }
+
+    public Map<String, Object> getProfile() {
         return (Map<String, Object>) getKakaoAccount().get("profile");
     }
 
-    public String getProvider(){
+    public String getProvider() {
         return "kakao";
     }
-
 }
