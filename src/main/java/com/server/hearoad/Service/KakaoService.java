@@ -3,6 +3,7 @@ package com.server.hearoad.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.server.hearoad.Model.User;
 import com.server.hearoad.Repository.UserRepository;
 import com.server.hearoad.Response.LoginResponse;
 import com.server.hearoad.Tokens.AuthTokens;
@@ -92,32 +93,32 @@ public class KakaoService {
         }
 
         Long id = jsonNode.get("id").asLong();
-        String email = jsonNode.get("kakao_account").get("email").asText();
         String nickname = jsonNode.get("properties").get("nickname").asText();
 
         userInfo.put("id", id);
-        userInfo.put("email", email);
         userInfo.put("nickname", nickname);
 
         return userInfo;
     }
 
-    // 카카오 로그인 로직
-    public LoginResponse kakaoLogin(String code, String platform) {
-        // 1. 인가 코드로 액세스 토큰 요청
-        String accessToken = getAccessToken(code, redirectUri);
+    // 3. 카카오ID로 회원가입 & 로그인 처리
+    private LoginResponse kakaoUserLogin(HashMap<String, Object> userInfo) {
 
-        // 2. 액세스 토큰으로 사용자 정보 요청
-        HashMap<String, Object> userInfo = getKakaoUserInfo(accessToken);
+        Long uid = Long.valueOf(userInfo.get("id").toString());
+        String nickName = userInfo.get("nickname").toString();
 
-        // 3. 사용자 정보를 이용해 로그인 처리 및 응답 생성 (이 부분은 필요에 따라 커스터마이징)
-        Long id = (Long) userInfo.get("id");
-        String nickname = (String) userInfo.get("nickname");
-        String email = (String) userInfo.get("email");
+        // 카카오 ID로 기존 유저 조회
+        User kakaoUser = userRepository.findById(uid.toString()).orElse(null);
 
-        // JWT 토큰 생성 (예시)
-        AuthTokens authTokens = authTokensGenerator.generateTokens(id);
+        if (kakaoUser == null) {    // 회원가입
+            kakaoUser = new User();
+            kakaoUser.setId(uid.toString());  // 카카오 ID를 사용
+            kakaoUser.setNickname(nickName);
+            userRepository.save(kakaoUser);
+        }
 
-        return new LoginResponse(id, nickname, authTokens);
+        // 토큰 생성
+        AuthTokens token = authTokensGenerator.generate(uid.toString());
+        return new LoginResponse(uid, nickName, token);
     }
 }
