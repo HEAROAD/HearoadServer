@@ -8,11 +8,11 @@ import com.server.hearoad.Service.KakaoService;
 import com.server.hearoad.Repository.TTSFileRepository;
 import com.server.hearoad.Model.User;
 import com.server.hearoad.DTO.KakaoUserProfileDto;
+import com.server.hearoad.Tokens.Generator.JwtTokenProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -24,27 +24,23 @@ public class VoiceController {
 
     private final TTSService ttsService;
     private final TTSFileRepository ttsFileRepository;
-    private final KakaoService kakaoService;
+    private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
+    // 파일 업로드 API
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(
             @RequestParam("word") String word,
             @RequestParam("emoji") String emoji,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String accessToken  // 카카오 Access Token을 헤더로 받음
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String jwtToken // JWT 토큰을 헤더로 받음
     ) {
-        // Bearer 토큰에서 실제 Access Token만 추출
-        String token = accessToken.replace("Bearer ", "");
+        // JWT 토큰에서 실제 사용자 ID를 추출
+        String token = jwtToken.replace("Bearer ", "");
+        String userId = jwtTokenProvider.getSubject(token); // JWT에서 subject (사용자 ID) 추출
 
-        // Access Token을 사용하여 카카오에서 사용자 프로필을 가져옴
-        KakaoUserProfileDto kakaoUserProfile = kakaoService.getUserProfile(token);
-
-        if (kakaoUserProfile == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("사용자 정보를 가져올 수 없습니다.");
-        }
-
-        // 사용자 정보 저장 또는 업데이트
-        User user = kakaoService.saveOrUpdateUser(kakaoUserProfile);
+        // 사용자 정보 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         // TTS 파일 생성 및 업로드
         String publicUrl = ttsService.synthesizeSpeechToFileAndUpload(word, emoji);
@@ -66,39 +62,45 @@ public class VoiceController {
         return ResponseEntity.ok(response);
     }
 
+    // 사용자 파일 조회 API
     @GetMapping("/files")
-    public ResponseEntity<List<TTSFile>> getUserFiles(@RequestHeader("Authorization") String accessToken) {
-        String token = accessToken.replace("Bearer ", "");
+    public ResponseEntity<List<TTSFile>> getUserFiles(@RequestHeader("Authorization") String jwtToken) {
+        String token = jwtToken.replace("Bearer ", "");
+        String userId = jwtTokenProvider.getSubject(token); // JWT에서 subject (사용자 ID) 추출
 
-        String kakaoUserId = String.valueOf(kakaoService.getUserProfile(token).getId());
-
-        User user = userRepository.findById(kakaoUserId)
+        // 사용자 정보 조회
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
+        // 사용자의 파일 목록 조회
         List<TTSFile> userFiles = ttsFileRepository.findByUser(user);
 
         return ResponseEntity.ok(userFiles);
     }
 
+    // 파일 삭제 API
     @DeleteMapping("/delete/{fileId}")
     public ResponseEntity<?> deleteUserFile(
             @PathVariable String fileId,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String accessToken
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String jwtToken
     ) {
-        String token = accessToken.replace("Bearer ", "");
+        String token = jwtToken.replace("Bearer ", "");
+        String userId = jwtTokenProvider.getSubject(token); // JWT에서 subject (사용자 ID) 추출
 
-        String kakaoUserId = String.valueOf(kakaoService.getUserProfile(token).getId());
-
-        User user = userRepository.findById(kakaoUserId)
+        // 사용자 정보 조회
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
+        // 파일 조회
         TTSFile ttsFile = ttsFileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));
 
+        // 파일 소유자 확인
         if (!ttsFile.getUser().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 파일을 삭제할 권한이 없습니다.");
         }
 
+        // 파일 삭제 (S3에서)
         boolean isDeletedFromS3 = ttsService.deleteFileFromS3(ttsFile.getFilePath());
         if (!isDeletedFromS3) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("S3에서 파일 삭제에 실패했습니다.");
@@ -109,5 +111,4 @@ public class VoiceController {
 
         return ResponseEntity.ok("파일이 성공적으로 삭제되었습니다.");
     }
-
 }
