@@ -7,6 +7,8 @@ import com.server.hearoad.Model.User;
 import com.server.hearoad.Repository.UserRepository;
 import com.server.hearoad.Response.LoginResponse;
 import com.server.hearoad.Tokens.AuthTokens;
+import com.server.hearoad.Tokens.Generator.AuthTokensGenerator;
+import com.server.hearoad.Tokens.Generator.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
