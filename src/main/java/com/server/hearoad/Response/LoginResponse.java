@@ -1,0 +1,15 @@
+package com.server.hearoad.Response;
+
+import com.server.hearoad.Tokens.AuthTokens;
+
+public class LoginResponse {
+    private Long id;
+    private String nickname;
+    private AuthTokens token;
+
+    public LoginResponse(Long id, String nickname, AuthTokens token) {
+        this.id = id;
+        this.nickname = nickname;
+        this.token = token;
+    }
+}
