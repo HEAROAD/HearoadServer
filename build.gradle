@@ -51,16 +51,20 @@ dependencies {
 
 	// MySQL connector (if you plan to use MySQL, otherwise remove)
 	runtimeOnly 'com.mysql:mysql-connector-j'
-	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.68.Final' // Netty 버전에 맞는 최신 버전으로 수정
+
+	// Netty DNS resolver for macOS
+	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.71.Final'
 
 	// Spring Boot Test Starter for testing Spring Boot applications
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	implementation 'io.netty:netty-resolver-dns-native-macos:4.1.71.Final'
 
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	implementation 'org.apache.commons:commons-lang3:3.12.0'
 
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 }
 
 tasks.named('test') {
