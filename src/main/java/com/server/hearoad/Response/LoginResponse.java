@@ -1,7 +1,11 @@
 package com.server.hearoad.Response;
 
 import com.server.hearoad.Tokens.AuthTokens;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@NoArgsConstructor
 public class LoginResponse {
     private Long id;
     private String nickname;

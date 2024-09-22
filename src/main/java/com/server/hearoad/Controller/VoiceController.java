@@ -7,7 +7,6 @@ import com.server.hearoad.Service.TTSService;
 import com.server.hearoad.Service.KakaoService;
 import com.server.hearoad.Repository.TTSFileRepository;
 import com.server.hearoad.Model.User;
-import com.server.hearoad.DTO.KakaoUserProfileDto;
 import com.server.hearoad.Tokens.Generator.JwtTokenProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
