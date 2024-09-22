@@ -30,7 +30,7 @@ public class KakaoService {
     private final AuthTokensGenerator authTokensGenerator;
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${kakao.client-id}")
+    @Value("${kakao.key.client-id}")
     private String clientId;
 
     @Value("${kakao.redirect-uri}")
@@ -103,9 +103,14 @@ public class KakaoService {
         return userInfo;
     }
 
-    // 3. 카카오ID로 회원가입 & 로그인 처리
-    private LoginResponse kakaoUserLogin(HashMap<String, Object> userInfo) {
+    // 사용자 닉네임 가져오기 (토큰을 사용)
+    public String getUserNicknameFromToken(String accessToken) {
+        HashMap<String, Object> userInfo = getKakaoUserInfo(accessToken);
+        return userInfo.get("nickname").toString();
+    }
 
+    // 카카오 ID로 회원가입 & 로그인 처리
+    private LoginResponse kakaoUserLogin(HashMap<String, Object> userInfo) {
         Long uid = Long.valueOf(userInfo.get("id").toString());
         String nickName = userInfo.get("nickname").toString();
 
@@ -123,4 +128,18 @@ public class KakaoService {
         AuthTokens token = authTokensGenerator.generate(uid.toString());
         return new LoginResponse(uid, nickName, token);
     }
+
+    // Web 버전 카카오 로그인 처리
+    public LoginResponse kakaoLogin(String code, String currentDomain) {
+
+        // 1. 인가 코드로 액세스 토큰 요청
+        String accessToken = getAccessToken(code, redirectUri);
+
+        // 2. 토큰으로 카카오 API 호출
+        HashMap<String, Object> userInfo = getKakaoUserInfo(accessToken);
+
+        // 3. 카카오ID로 회원가입 & 로그인 처리
+        return kakaoUserLogin(userInfo);
+    }
+
 }
