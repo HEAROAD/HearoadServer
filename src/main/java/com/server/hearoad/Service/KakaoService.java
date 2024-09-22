@@ -1,135 +1,172 @@
 package com.server.hearoad.Service;
 
-import com.server.hearoad.DTO.KakaoTokenResponseDto;
-import com.server.hearoad.DTO.KakaoUserProfileDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.server.hearoad.Model.User;
 import com.server.hearoad.Repository.UserRepository;
-import io.netty.handler.codec.http.HttpHeaderValues;
+import com.server.hearoad.Response.LoginResponse;
+import com.server.hearoad.Tokens.AuthTokens;
+import com.server.hearoad.Tokens.Generator.AuthTokensGenerator;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
 
-@Slf4j
-@RequiredArgsConstructor
+import java.util.HashMap;
+
 @Service
+@RequiredArgsConstructor
 public class KakaoService {
 
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final UserRepository userRepository;
-    private final TTSService ttsService;
+    private final AuthTokensGenerator authTokensGenerator;
 
-    private final WebClient webClient = WebClient.create();
+    @Value("${kakao.key.client-id}")
+    private String clientId;
 
-    private final String KAUTH_TOKEN_URL_HOST = "https://kauth.kakao.com";
-    private final String KAUTH_USER_URL_HOST = "https://kapi.kakao.com";
+    @Value("${kakao.redirect-uri}")
+    private String redirectUri;
 
-    // clientId를 메서드 매개변수로 받도록 수정
-    public String getAccessTokenFromKakao(String clientId, String code) {
+    // 1. "인가 코드"로 "액세스 토큰" 요청
+    private String getAccessToken(String code, String redirectUri) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "authorization_code");
+        body.add("client_id", clientId);
+        body.add("redirect_uri", redirectUri);
+        body.add("code", code);
+
+        HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(body, headers);
+        RestTemplate rt = new RestTemplate();
+        ResponseEntity<String> response = rt.exchange(
+                "https://kauth.kakao.com/oauth/token",
+                HttpMethod.POST,
+                kakaoTokenRequest,
+                String.class
+        );
+
+        String responseBody = response.getBody();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = null;
         try {
-            KakaoTokenResponseDto kakaoTokenResponseDto = WebClient.create(KAUTH_TOKEN_URL_HOST)
-                    .post()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/oauth/token")
-                            .queryParam("grant_type", "authorization_code")
-                            .queryParam("client_id", clientId)
-                            .queryParam("code", code)
-                            .build())
-                    .header(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-                    .retrieve()
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), clientResponse -> {
-                        log.error("Failed to retrieve access token from Kakao. Status: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("Failed to retrieve access token from Kakao."));
-                    })
-                    .bodyToMono(KakaoTokenResponseDto.class)
-                    .block();
-
-            log.info(" [Kakao Service] Access Token ------> {}", kakaoTokenResponseDto.getAccessToken());
-            return kakaoTokenResponseDto.getAccessToken();
-        } catch (WebClientResponseException e) {
-            log.error("Error while retrieving access token: {}", e.getMessage());
-            throw new RuntimeException("Failed to retrieve access token from Kakao.", e);
+            jsonNode = objectMapper.readTree(responseBody);
+        } catch (JsonProcessingException e) {
+            logger.error("Error parsing JSON", e);
         }
-    }
 
-    public KakaoUserProfileDto getUserProfile(String accessToken) {
-        try {
-            KakaoUserProfileDto userProfile = WebClient.create(KAUTH_USER_URL_HOST)
-                    .get()
-                    .uri("/v2/user/me")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), clientResponse -> {
-                        log.error("Failed to retrieve user profile from Kakao. Status: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("Failed to retrieve user profile from Kakao."));
-                    })
-                    .bodyToMono(KakaoUserProfileDto.class)
-                    .block();
-
-            log.info("User profile retrieved successfully.");
-            return userProfile;
-        } catch (WebClientResponseException e) {
-            log.error("Error while retrieving user profile: {}", e.getMessage());
-            throw new RuntimeException("Failed to retrieve user profile from Kakao.", e);
-        }
-    }
-
-    public User saveOrUpdateUser(KakaoUserProfileDto userProfile) {
-        log.info("saveOrUpdateUser method called");
-        try {
-            String kakaoUserId = String.valueOf(userProfile.getId());
-            String nickname = userProfile.getProperties().getNickname();
-            String profileImage = userProfile.getProperties().getProfileImage();
-
-            log.info("User ID: {}", kakaoUserId);
-            log.info("User Nickname: {}", nickname);
-            log.info("User Profile Image: {}", profileImage);
-
-            User user = userRepository.findById(kakaoUserId)
-                    .orElseGet(() -> {
-                        User newUser = new User(kakaoUserId, nickname, profileImage);
-                        ttsService.generateDefaultFilesForUser(newUser);
-                        return userRepository.save(newUser);
-                    });
-
-            log.info("User found or new user created");
-
-            user.setNickname(nickname);
-            user.setProfileImage(profileImage);
-
-            User savedUser = userRepository.save(user);
-            log.info("User saved successfully.");
-            return savedUser;
-        } catch (Exception e) {
-            log.error("Error occurred while saving user: ", e);
-            throw new RuntimeException("Failed to save or update user.", e);
+        if (jsonNode != null && jsonNode.has("access_token")) {
+            return jsonNode.get("access_token").asText();
+        } else {
+            throw new RuntimeException("Failed to retrieve access token from Kakao");
         }
     }
 
     public String getUserNicknameFromToken(String accessToken) {
+        // HTTP Header 생성
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + accessToken);
+        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        // HTTP 요청 보내기
+        HttpEntity<LinkedMultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);
+        RestTemplate rt = new RestTemplate();
+        ResponseEntity<String> response = rt.exchange(
+                "https://kapi.kakao.com/v2/user/me", // 카카오 사용자 정보 API
+                HttpMethod.POST,
+                kakaoProfileRequest,
+                String.class
+        );
+
+        // JSON 응답에서 닉네임 추출
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode;
         try {
-            KakaoUserProfileDto userProfile = WebClient.create(KAUTH_USER_URL_HOST)
-                    .get()
-                    .uri("/v2/user/me")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), clientResponse -> {
-                        log.error("Failed to retrieve user profile from Kakao. Status: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("Failed to retrieve user profile from Kakao."));
-                    })
-                    .bodyToMono(KakaoUserProfileDto.class)
-                    .block();
-
-            if (userProfile != null && userProfile.getProperties() != null) {
-                return userProfile.getProperties().getNickname();
-            }
-
-            return null;
-        } catch (WebClientResponseException e) {
-            log.error("Error while retrieving user profile: {}", e.getMessage());
-            return null;
+            jsonNode = objectMapper.readTree(response.getBody());
+            String nickname = jsonNode.get("properties").get("nickname").asText();
+            return nickname;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null; // 오류가 발생하면 null을 반환합니다.
         }
+    }
+
+    // 2. 토큰으로 카카오 API 호출
+    private HashMap<String, Object> getKakaoUserInfo(String accessToken) {
+        HashMap<String, Object> userInfo = new HashMap<>();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + accessToken);
+        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        HttpEntity<MultiValueMap<String, String>> kakaoUserInfoRequest = new HttpEntity<>(headers);
+        RestTemplate rt = new RestTemplate();
+        ResponseEntity<String> response = rt.exchange(
+                "https://kapi.kakao.com/v2/user/me",
+                HttpMethod.POST,
+                kakaoUserInfoRequest,
+                String.class
+        );
+
+        String responseBody = response.getBody();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = null;
+        try {
+            jsonNode = objectMapper.readTree(responseBody);
+        } catch (JsonProcessingException e) {
+            logger.error("Error parsing user info from Kakao", e);
+        }
+
+        if (jsonNode != null) {
+            Long id = jsonNode.get("id").asLong();
+            String nickname = jsonNode.get("properties").get("nickname").asText();
+
+            userInfo.put("id", id);
+            userInfo.put("nickname", nickname);
+        } else {
+            throw new RuntimeException("Failed to retrieve user info from Kakao");
+        }
+
+        return userInfo;
+    }
+
+    // 3. 카카오ID로 회원가입 및 로그인 처리
+    private LoginResponse kakaoUserLogin(HashMap<String, Object> userInfo) {
+        Long uid = Long.valueOf(userInfo.get("id").toString());
+        String nickName = userInfo.get("nickname").toString();
+
+        User kakaoUser = userRepository.findById(uid.toString()).orElse(null);
+
+        if (kakaoUser == null) {    // 회원가입
+            kakaoUser = new User();
+            kakaoUser.setId(uid.toString());  // 고유 ID 설정
+            kakaoUser.setNickname(nickName);
+            kakaoUser.setLoginType("kakao");
+            userRepository.save(kakaoUser);
+        }
+
+        // 토큰 생성
+        AuthTokens token = authTokensGenerator.generate(uid.toString());
+        return new LoginResponse(uid, nickName, token);
+    }
+
+    // Web 버전 카카오 로그인 처리
+    public LoginResponse kakaoLogin(String code, String currentDomain) {
+        // 1. 인가 코드로 액세스 토큰 요청
+        String accessToken = getAccessToken(code, redirectUri);
+
+        // 2. 토큰으로 카카오 API 호출
+        HashMap<String, Object> userInfo = getKakaoUserInfo(accessToken);
+
+        // 3. 카카오 ID로 회원가입 및 로그인 처리
+        return kakaoUserLogin(userInfo);
     }
 }
