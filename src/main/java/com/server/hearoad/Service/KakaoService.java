@@ -81,7 +81,7 @@ public class KakaoService {
         RestTemplate rt = new RestTemplate();
         ResponseEntity<String> response = rt.exchange(
                 "https://kapi.kakao.com/v2/user/me", // 카카오 사용자 정보 API
-                HttpMethod.POST,
+                HttpMethod.GET,
                 kakaoProfileRequest,
                 String.class
         );
@@ -91,7 +91,7 @@ public class KakaoService {
         JsonNode jsonNode;
         try {
             jsonNode = objectMapper.readTree(response.getBody());
-            String nickname = jsonNode.get("properties").get("nickname").asText();
+            String nickname = jsonNode.get("nickname").asText();
             return nickname;
         } catch (Exception e) {
             e.printStackTrace();

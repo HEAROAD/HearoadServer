@@ -24,9 +24,9 @@ public class ChatRoom {
 
     private LocalDateTime lastMessageTime;
 
-    private List<ChatMessage> messages = new ArrayList<>(); // 초기화 추가
+    private List<ChatMessage> messages = new ArrayList<>();
 
-    public ChatRoom(String title, String creatorNickname) {
+    public ChatRoom (String title, String creatorNickname) {
         this.title = title;
         this.creatorNickname = creatorNickname;
         this.lastMessageTime = LocalDateTime.now();
