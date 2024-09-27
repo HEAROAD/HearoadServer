@@ -8,6 +8,7 @@ import com.server.hearoad.Repository.UserRepository;
 import com.server.hearoad.Response.LoginResponse;
 import com.server.hearoad.Tokens.AuthTokens;
 import com.server.hearoad.Tokens.Generator.AuthTokensGenerator;
+import com.server.hearoad.Tokens.Generator.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class KakaoService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final UserRepository userRepository;
     private final AuthTokensGenerator authTokensGenerator;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Value("${kakao.key.client-id}")
     private String clientId;
@@ -168,5 +170,10 @@ public class KakaoService {
 
         // 3. 카카오 ID로 회원가입 및 로그인 처리
         return kakaoUserLogin(userInfo);
+    }
+
+    // JWT 토큰에서 사용자 ID를 추출하는 메서드
+    public String getUserIdFromToken(String token) {
+        return jwtTokenProvider.getSubject(token);
     }
 }

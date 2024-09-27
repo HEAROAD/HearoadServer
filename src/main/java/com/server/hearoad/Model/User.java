@@ -19,6 +19,10 @@ public class User {
     private String profileImage;
     private String loginType;  // 로그인 유형 추가 (kakao 등)
 
+    public String getNickname() {
+        return nickname;
+    }
+
     // id 없이 nickname과 profileImage만 설정하는 생성자
     public User(String nickname, String profileImage) {
         this.nickname = nickname;

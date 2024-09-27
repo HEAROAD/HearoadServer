@@ -1,20 +1,18 @@
 package com.server.hearoad.Controller;
 
-import com.server.hearoad.Model.ChatMessage;
 import com.server.hearoad.Model.ChatRoom;
+import com.server.hearoad.Model.Message;
 import com.server.hearoad.Service.ChatRoomService;
-import com.server.hearoad.Service.FileStorageService;
 import com.server.hearoad.Service.KakaoService;
+import com.server.hearoad.Service.MessageService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.beans.factory.annotation.Value;
 
-import java.time.LocalDateTime;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 
 @RestController
@@ -23,108 +21,68 @@ import java.util.List;
 public class ChatController {
 
     private final ChatRoomService chatRoomService;
+    private final MessageService messageService;
     private final KakaoService kakaoService;
-    private final FileStorageService fileStorageService;
 
-    @PostMapping("/rooms")
-    public ResponseEntity<ChatRoom> createChatRoom(@RequestHeader("Authorization") String authorizationHeader, @RequestParam String title) {
-        String accessToken = extractToken(authorizationHeader);
-        String nickname = kakaoService.getUserNicknameFromToken(accessToken);
-
-        if (nickname == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-
-        ChatRoom chatRoom = chatRoomService.createChatRoom(title, nickname);
-        return new ResponseEntity<>(chatRoom, HttpStatus.CREATED);
+    // 채팅방 생성
+    @PostMapping("/room")
+    public ResponseEntity<ChatRoom> createChatRoom(@RequestBody ChatRoom chatRoom, HttpServletRequest request) {
+        String userId = kakaoService.getUserIdFromToken(request.getHeader("Authorization").substring(7));
+        ChatRoom createdChatRoom = chatRoomService.createChatRoom(userId, chatRoom.getTitle());
+        return ResponseEntity.ok(createdChatRoom);
     }
 
-    @GetMapping("/rooms") //채팅방 리스트 반환
-    public ResponseEntity<List<ChatRoom>> getAllChatRooms() {
-        List<ChatRoom> chatRooms = chatRoomService.getAllChatRooms();
-        return new ResponseEntity<>(chatRooms, HttpStatus.OK);
+    // 채팅방 목록 조회
+    @GetMapping("/rooms")
+    public ResponseEntity<List<ChatRoom>> getChatRooms(HttpServletRequest request) {
+        String userId = kakaoService.getUserIdFromToken(request.getHeader("Authorization").substring(7));
+        return ResponseEntity.ok(chatRoomService.getChatRoomsByUserId(userId));
     }
 
-    @GetMapping("/rooms/{roomId}") //채팅 반환
-    public ResponseEntity<ChatRoom> getChatRoomById(@PathVariable String roomId) {
-        return chatRoomService.getChatRoomById(roomId)
-                .map(chatRoom -> new ResponseEntity<>(chatRoom, HttpStatus.OK))
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-    }
+    // 메시지 전송 (채팅방 ID를 헤더로 받음)
+    @PostMapping("/message")
+    public ResponseEntity<Message> sendMessage(
+            @RequestPart(value = "message", required = false) String message,
+            @RequestPart(value = "type") String type,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestHeader("chatRoomId") String chatRoomId,
+            HttpServletRequest request) {
 
-    // FastAPI 서버 URL을 설정하는 설정값 추가
-    @Value("${fastapi.server.url}")
-    private String fastApiServerUrl;
+        String userId = kakaoService.getUserIdFromToken(request.getHeader("Authorization").substring(7));
+        String fileUrl = null;
+        String fileData = null;
+        String fileName = null;
 
-    @PostMapping("/rooms/{roomId}/messages")
-    public ResponseEntity<Void> addMessageToChatRoom(
-            @RequestHeader("Authorization") String authorizationHeader,
-            @PathVariable String roomId,
-            @RequestParam(value = "message", required = false) String message, // message를 선택적으로 설정
-            @RequestParam(value = "file", required = false) MultipartFile file,
-            @RequestParam(value = "type", required = true) String type) {
-
-        String accessToken = extractToken(authorizationHeader);
-        String nickname = kakaoService.getUserNicknameFromToken(accessToken);
-
-        if (nickname == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-
-        ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setType(type); // type 값을 저장
-        chatMessage.setTimestamp(LocalDateTime.now());
-
-        if (file != null && !file.isEmpty()) {
-            if ("USER".equalsIgnoreCase(type)) {
-                // 파일을 FastAPI 서버로 전송하여 예측 결과를 받음
-                String predictedWord = sendFileToFastApiServer(file);
-                chatMessage.setMessage(predictedWord); // 예측 결과로 메시지를 설정
-            } else {
-                // 파일 업로드 처리
-                String imageUrl = fileStorageService.storeFile(file);
-                chatMessage.setImageUrl(imageUrl);
+        // 조건에 따른 처리
+        if ("USER".equals(type)) {
+            // type이 USER일 때, MP4 파일이 필요
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body(null); // 파일이 없을 경우 오류 처리
             }
-        } else if (message != null && !message.isEmpty()) {
-            chatMessage.setMessage(message);
+            try {
+                // 파일을 Base64 인코딩하여 저장
+                fileData = Base64.getEncoder().encodeToString(file.getBytes());
+                fileName = file.getOriginalFilename();
+            } catch (IOException e) {
+                return ResponseEntity.status(500).body(null); // 파일 처리 오류
+            }
+        } else if ("PARTNER".equals(type)) {
+            // type이 PARTNER일 때, message가 필요
+            if (message == null || message.isEmpty()) {
+                return ResponseEntity.badRequest().body(null); // 메시지가 없을 경우 오류 처리
+            }
         } else {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // message나 file이 없는 경우 400 Bad Request 반환
+            return ResponseEntity.badRequest().body(null); // 지원하지 않는 type일 경우 오류 처리
         }
 
-        chatRoomService.addMessageToChatRoom(roomId, chatMessage);
-        return new ResponseEntity<>(HttpStatus.OK);
+        // 메시지 전송
+        Message sentMessage = messageService.sendMessage(chatRoomId, userId, type, message, fileUrl, fileData, fileName);
+        return ResponseEntity.ok(sentMessage);
     }
 
-    // FastAPI 서버로 파일을 전송하고 응답을 받는 메소드
-    private String sendFileToFastApiServer(MultipartFile file) {
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-
-            // 파일을 MultiValueMap에 추가
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", file.getResource());
-
-            // 헤더 설정
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-
-            // FastAPI 서버로 POST 요청 보내기
-            ResponseEntity<String> response = restTemplate.postForEntity(fastApiServerUrl + "/predict", requestEntity, String.class);
-
-            // 예측된 단어 반환
-            return response.getBody();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Prediction Failed";
-        }
-    }
-
-    private String extractToken(String authorizationHeader) {
-        if (authorizationHeader.startsWith("Bearer ")) {
-            return authorizationHeader.substring(7);
-        }
-        return null;
+    // 특정 채팅방의 메시지 조회
+    @GetMapping("/messages/{chatRoomId}")
+    public ResponseEntity<List<Message>> getMessages(@PathVariable String chatRoomId) {
+        return ResponseEntity.ok(messageService.getMessagesByChatRoomId(chatRoomId));
     }
 }

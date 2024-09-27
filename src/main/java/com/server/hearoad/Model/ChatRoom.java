@@ -1,35 +1,29 @@
 package com.server.hearoad.Model;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "chatrooms")
 public class ChatRoom {
     @Id
     private String id;
-
+    private String userId; // 채팅방을 생성한 사용자 ID
     private String title;
+    private Date lastMessageTime; // 가장 최근 메시지 시간
 
-    private String creatorNickname;
-
-    private LocalDateTime lastMessageTime;
-
-    private List<ChatMessage> messages = new ArrayList<>(); // 초기화 추가
-
-    public ChatRoom(String title, String creatorNickname) {
+    public ChatRoom(String userId, String title) {
+        this.userId = userId;
         this.title = title;
-        this.creatorNickname = creatorNickname;
-        this.lastMessageTime = LocalDateTime.now();
-        this.messages = new ArrayList<>(); // 초기화 추가
+        this.lastMessageTime = new Date(); // 생성 시점의 시간
     }
 }
