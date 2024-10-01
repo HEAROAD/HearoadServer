@@ -27,7 +27,7 @@ import java.util.List;
 public class ChatController {
 
     private final ChatRoomService chatRoomService;
-    private final MessageService messageService;
+    private final MessageService messageService; // 메시지 서비스 주입
     private final KakaoService kakaoService;
 
     // FastAPI 서버 URL 설정
@@ -51,54 +51,36 @@ public class ChatController {
     // 메시지 전송 (채팅방 ID를 헤더로 받음)
     @PostMapping("/message")
     public ResponseEntity<Message> sendMessage(
-            @RequestPart(value = "message", required = false) String message,
-            @RequestPart(value = "type") String type,
-            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart("type") String type,
+            @RequestPart("message") String message,
             @RequestHeader("chatRoomId") String chatRoomId,
             HttpServletRequest request) {
 
         String userId = kakaoService.getUserIdFromToken(request.getHeader("Authorization").substring(7));
-        String fileUrl = null;
-        String fileData = null;
-        String fileName = null;
-        String processedMessage = null; // FastAPI 서버에서 반환된 메시지를 저장할 변수
-
-        // 조건에 따른 처리
-        if ("USER".equals(type)) {
-            // type이 USER일 때, 영상 파일(MP4 등) 확인
-            if (file == null || file.isEmpty()) {
-                return ResponseEntity.badRequest().body(null); // 파일이 없을 경우 오류 처리
-            }
-
-            // 파일 형식 검증 (예: .mp4)
-            String fileExtension = getFileExtension(file.getOriginalFilename());
-            if (!isVideoFile(fileExtension)) {
-                return ResponseEntity.status(415).body(null); // 지원하지 않는 미디어 타입 415 반환
-            }
-
-            try {
-                // FastAPI 서버로 파일 전송 및 응답 처리
-                processedMessage = sendFileToFastApiServer(file);
-
-                // 파일을 Base64 인코딩하여 저장
-                fileData = Base64.getEncoder().encodeToString(file.getBytes());
-                fileName = file.getOriginalFilename();
-            } catch (IOException e) {
-                return ResponseEntity.status(500).body(null); // 파일 처리 오류
-            }
-        } else if ("PARTNER".equals(type)) {
-            // type이 PARTNER일 때, message가 필요
-            if (message == null || message.isEmpty()) {
-                return ResponseEntity.badRequest().body(null); // 메시지가 없을 경우 오류 처리
-            }
-            processedMessage = message; // 일반 메시지일 경우 원래 메시지 저장
-        } else {
-            return ResponseEntity.badRequest().body(null); // 지원하지 않는 type일 경우 오류 처리
-        }
 
         // 메시지 전송
-        Message sentMessage = messageService.sendMessage(chatRoomId, userId, type, processedMessage, fileUrl, fileData, fileName);
+        Message sentMessage = messageService.sendMessage(chatRoomId, userId, type, message, null, null, null);
         return ResponseEntity.ok(sentMessage);
+    }
+
+    // MP4 파일 전송 API
+    @PostMapping("/file")
+    public ResponseEntity<String> sendFileToFastApi(
+            @RequestPart("file") MultipartFile file) {
+
+        // 파일 확장자 체크
+        String fileExtension = getFileExtension(file.getOriginalFilename());
+        if (!isVideoFile(fileExtension)) {
+            return ResponseEntity.status(415).body("Invalid file type. Only MP4 files are allowed.");
+        }
+
+        try {
+            // FastAPI 서버로 파일 전송
+            String response = sendFileToFastApiServer(file);
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("Failed to upload file");
+        }
     }
 
     // 특정 채팅방의 메시지 조회
@@ -108,32 +90,27 @@ public class ChatController {
     }
 
     // FastAPI 서버로 파일을 전송하고 응답을 받는 메서드
-    private String sendFileToFastApiServer(MultipartFile file) {
-        try {
-            RestTemplate restTemplate = new RestTemplate();
+    private String sendFileToFastApiServer(MultipartFile file) throws IOException {
+        RestTemplate restTemplate = new RestTemplate();
 
-            // 파일을 MultiValueMap에 추가
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", file.getResource());
+        // 파일을 MultiValueMap에 추가
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", file.getResource());
 
-            // 헤더 설정
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        // 헤더 설정
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-            // FastAPI 서버로 POST 요청 보내기
-            ResponseEntity<String> response = restTemplate.postForEntity(fastApiServerUrl + "/predict", requestEntity, String.class);
+        // FastAPI 서버로 POST 요청 보내기
+        ResponseEntity<String> response = restTemplate.postForEntity(fastApiServerUrl + "/predict", requestEntity, String.class);
 
-            // FastAPI 서버의 예측 결과 반환
-            return response.getBody();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Prediction Failed"; // 예측 실패 시 기본 메시지 반환
-        }
+        // FastAPI 서버의 응답 반환
+        return response.getBody();
     }
 
-    // 파일 확장자를 확인하는 메서드
+    // 파일 확장자 확인하는 메서드
     private String getFileExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return "";
