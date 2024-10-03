@@ -20,7 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -148,17 +150,21 @@ public class ChatController {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             // 요청 바디 설정
-            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("message", message);
+            Map<String, String> body = new HashMap<>();
+            body.put("message", message);
 
-            // 요청 엔티티 생성
-            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(body, headers);
 
-            // FastAPI 서버로 POST 요청 보내기
-            ResponseEntity<String> response = restTemplate.postForEntity(fastApiServerUrl + "/extract_keywords", requestEntity, String.class);
+            // FastAPI 서버로 POST 요청 보내기 (Map으로 응답 받음)
+            ResponseEntity<Map> response = restTemplate.postForEntity(fastApiServerUrl + "/extract_keywords", requestEntity, Map.class);
 
             // FastAPI 서버로부터 받은 키워드 반환
-            return response.getBody();
+            Map<String, String> responseBody = response.getBody();
+            if (responseBody != null && responseBody.containsKey("keywords")) {
+                return responseBody.get("keywords");  // JSON의 "keywords" 값을 반환
+            } else {
+                return "Keyword Extraction Failed";
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return "Keyword Extraction Failed"; // 오류 시 반환 메시지
