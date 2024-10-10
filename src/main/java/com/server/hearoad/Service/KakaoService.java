@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -92,5 +93,21 @@ public class KakaoService {
     // JWT 토큰에서 사용자 ID를 추출하는 메서드
     public String getUserIdFromToken(String token) {
         return jwtTokenProvider.getSubject(token);
+    }
+
+    public String getUserNicknameFromToken(String accessToken) {
+        try {
+            // JWT 토큰에서 사용자 ID 추출
+            String userId = jwtTokenProvider.getSubject(accessToken);
+
+            // 사용자 정보 조회
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+            return user.getNickname();
+        } catch (Exception e) {
+            logger.error("Error getting user nickname from token", e);
+            return null;
+        }
     }
 }
