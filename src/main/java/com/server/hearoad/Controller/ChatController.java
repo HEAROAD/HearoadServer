@@ -2,6 +2,7 @@ package com.server.hearoad.Controller;
 
 import com.server.hearoad.Model.ChatRoom;
 import com.server.hearoad.Model.Message;
+import com.server.hearoad.Response.MessageResponse;
 import com.server.hearoad.Service.ChatRoomService;
 import com.server.hearoad.Service.KakaoService;
 import com.server.hearoad.Service.MessageService;
@@ -19,7 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -50,7 +53,7 @@ public class ChatController {
 
     // 메시지 전송 (채팅방 ID를 헤더로 받음)
     @PostMapping("/message")
-    public ResponseEntity<Message> sendMessage(
+    public ResponseEntity<MessageResponse> sendMessage(
             @RequestPart(value = "message", required = false) String message,
             @RequestPart(value = "type") String type,
             @RequestPart(value = "file", required = false) MultipartFile file,
@@ -62,6 +65,7 @@ public class ChatController {
         String fileData = null;
         String fileName = null;
         String processedMessage = null; // FastAPI 서버에서 반환된 메시지를 저장할 변수
+        String keywords = null; // 핵심 단어 저장할 변수
 
         // 조건에 따른 처리
         if ("USER".equals(type)) {
@@ -91,14 +95,17 @@ public class ChatController {
             if (message == null || message.isEmpty()) {
                 return ResponseEntity.badRequest().body(null); // 메시지가 없을 경우 오류 처리
             }
-            processedMessage = message; // 일반 메시지일 경우 원래 메시지 저장
+
+            // 핵심 단어 추출 로직 추가
+            keywords = extractKeywordsFromMessage(message);
+            processedMessage = message; // 원본 메시지를 processedMessage로 할당
         } else {
             return ResponseEntity.badRequest().body(null); // 지원하지 않는 type일 경우 오류 처리
         }
 
-        // 메시지 전송
-        Message sentMessage = messageService.sendMessage(chatRoomId, userId, type, processedMessage, fileUrl, fileData, fileName);
-        return ResponseEntity.ok(sentMessage);
+        // 원본 메시지와 추출된 키워드를 MessageResponse로 반환
+        MessageResponse response = new MessageResponse(processedMessage, keywords);
+        return ResponseEntity.ok(response);
     }
 
     // 특정 채팅방의 메시지 조회
@@ -130,6 +137,37 @@ public class ChatController {
         } catch (Exception e) {
             e.printStackTrace();
             return "Prediction Failed"; // 예측 실패 시 기본 메시지 반환
+        }
+    }
+
+    // FastAPI 서버로 메시지를 전송하고 핵심 단어를 추출하는 메서드
+    private String extractKeywordsFromMessage(String message) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+
+            // 요청 헤더 설정
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // 요청 바디 설정
+            Map<String, String> body = new HashMap<>();
+            body.put("message", message);
+
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(body, headers);
+
+            // FastAPI 서버로 POST 요청 보내기 (Map으로 응답 받음)
+            ResponseEntity<Map> response = restTemplate.postForEntity(fastApiServerUrl + "/extract_keywords", requestEntity, Map.class);
+
+            // FastAPI 서버로부터 받은 키워드 반환
+            Map<String, String> responseBody = response.getBody();
+            if (responseBody != null && responseBody.containsKey("keywords")) {
+                return responseBody.get("keywords");  // JSON의 "keywords" 값을 반환
+            } else {
+                return "Keyword Extraction Failed";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Keyword Extraction Failed"; // 오류 시 반환 메시지
         }
     }
 
