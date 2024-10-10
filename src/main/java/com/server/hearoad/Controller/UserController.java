@@ -27,18 +27,16 @@ import java.util.NoSuchElementException;
 public class UserController {
     private final KakaoService kakaoService;
     private final UserRepository userRepository;
-    private final VoiceAnalysisService voiceAnalysisService;
     private final VoiceAnalysisResultRepository voiceAnalysisResultRepository;
+    private final VoiceAnalysisService voiceAnalysisService;
 
-    // 로그인 엔드포인트
-    @ResponseBody
+    // 수정된 로그인 엔드포인트
     @PostMapping("/login/oauth/kakao")
-    public ResponseEntity<LoginResponse> kakaoLoginFromAndroid(@RequestParam String code, HttpServletRequest request) {
+    public ResponseEntity<LoginResponse> kakaoLoginFromAndroid(@RequestParam String accessToken) {
         try {
-            String currentDomain = request.getServerName();
-            return ResponseEntity.ok(kakaoService.kakaoLogin(code, currentDomain));
+            return ResponseEntity.ok(kakaoService.kakaoLoginWithToken(accessToken));
         } catch (NoSuchElementException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item Not Found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found");
         }
     }
 
@@ -90,6 +88,7 @@ public class UserController {
             return "히로"; // JSON 파싱 실패 시 기본값 "히로" 반환
         }
     }
+
     // 음성 파일 업로드 및 분석 엔드포인트
     @PostMapping("/analyze/voice")
     public ResponseEntity<?> analyzeVoice(
