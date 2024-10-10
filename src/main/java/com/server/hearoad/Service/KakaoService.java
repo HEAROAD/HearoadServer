@@ -15,7 +15,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 @Service
@@ -26,88 +25,98 @@ public class KakaoService {
     private final UserRepository userRepository;
     private final AuthTokensGenerator authTokensGenerator;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RestTemplate restTemplate;
 
     public LoginResponse kakaoLoginWithToken(String accessToken) {
-        // 1. 액세스 토큰으로 카카오 API 호출하여 사용자 정보 가져오기
-        HashMap<String, Object> userInfo = getKakaoUserInfo(accessToken);
-
-        // 2. 카카오 ID로 회원가입 및 로그인 처리
-        return kakaoUserLogin(userInfo);
-    }
-
-    // 토큰으로 카카오 API 호출하여 사용자 정보 가져오기
-    private HashMap<String, Object> getKakaoUserInfo(String accessToken) {
-        HashMap<String, Object> userInfo = new HashMap<>();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Bearer " + accessToken);
-        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
-
-        HttpEntity<String> kakaoUserInfoRequest = new HttpEntity<>(headers);
-        RestTemplate rt = new RestTemplate();
-        ResponseEntity<String> response = rt.exchange(
-                "https://kapi.kakao.com/v2/user/me",
-                HttpMethod.GET,
-                kakaoUserInfoRequest,
-                String.class
-        );
-
-        String responseBody = response.getBody();
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode;
         try {
-            jsonNode = objectMapper.readTree(responseBody);
-            Long id = jsonNode.get("id").asLong();
-            String nickname = jsonNode.get("properties").get("nickname").asText();
+            // 카카오 액세스 토큰으로 사용자 정보 가져오기
+            KakaoUserInfo userInfo = getKakaoUserInfo(accessToken);
 
-            userInfo.put("id", id);
-            userInfo.put("nickname", nickname);
+            // 사용자 정보로 로그인 또는 회원가입 처리
+            User user = userRepository.findById(userInfo.getId()).orElse(null);
+            if (user == null) {
+                user = new User();
+                user.setId(userInfo.getId());
+                user.setNickname(userInfo.getNickname());
+                user.setLoginType("kakao");
+                userRepository.save(user);
+            }
+
+            // 새로운 JWT 토큰 생성
+            AuthTokens newToken = authTokensGenerator.generate(user.getId());
+            return new LoginResponse(Long.parseLong(user.getId()), user.getNickname(), newToken);
         } catch (Exception e) {
-            logger.error("Error parsing user info from Kakao", e);
-            throw new RuntimeException("Failed to retrieve user info from Kakao");
+            logger.error("Error processing Kakao login with token", e);
+            throw new RuntimeException("Failed to process Kakao login", e);
         }
-
-        return userInfo;
     }
 
-    // 카카오 ID로 회원가입 및 로그인 처리
-    private LoginResponse kakaoUserLogin(HashMap<String, Object> userInfo) {
-        Long uid = Long.valueOf(userInfo.get("id").toString());
-        String nickName = userInfo.get("nickname").toString();
+    private KakaoUserInfo getKakaoUserInfo(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        User kakaoUser = userRepository.findById(uid.toString()).orElse(null);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        if (kakaoUser == null) {    // 회원가입
-            kakaoUser = new User();
-            kakaoUser.setId(uid.toString());
-            kakaoUser.setNickname(nickName);
-            kakaoUser.setLoginType("kakao");
-            userRepository.save(kakaoUser);
-        }
-
-        // 토큰 생성
-        AuthTokens token = authTokensGenerator.generate(uid.toString());
-        return new LoginResponse(uid, nickName, token);
-    }
-
-    // JWT 토큰에서 사용자 ID를 추출하는 메서드
-    public String getUserIdFromToken(String token) {
-        return jwtTokenProvider.getSubject(token);
-    }
-
-    public String getUserNicknameFromToken(String accessToken) {
         try {
-            // JWT 토큰에서 사용자 ID 추출
-            String userId = jwtTokenProvider.getSubject(accessToken);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "https://kapi.kakao.com/v2/user/me",
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
 
-            // 사용자 정보 조회
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new NoSuchElementException("User not found"));
+            if (response.getStatusCode() == HttpStatus.OK) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode rootNode = mapper.readTree(response.getBody());
 
-            return user.getNickname();
+                String id = rootNode.path("id").asText();
+                String nickname = rootNode.path("properties").path("nickname").asText();
+
+                return new KakaoUserInfo(id, nickname);
+            } else {
+                throw new RuntimeException("Failed to get Kakao user info. Status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            logger.error("Error while getting Kakao user info", e);
+            throw new RuntimeException("Failed to get Kakao user info", e);
+        }
+    }
+
+    public String getUserIdFromToken(String jwtToken) {
+        try {
+            return jwtTokenProvider.getSubject(jwtToken);
+        } catch (Exception e) {
+            logger.error("Error getting user ID from token", e);
+            return null;
+        }
+    }
+
+    public String getUserNicknameFromToken(String jwtToken) {
+        try {
+            return jwtTokenProvider.getClaim(jwtToken, "nickname");
         } catch (Exception e) {
             logger.error("Error getting user nickname from token", e);
             return null;
+        }
+    }
+
+    // 카카오 사용자 정보를 담는 내부 클래스
+    private static class KakaoUserInfo {
+        private String id;
+        private String nickname;
+
+        public KakaoUserInfo(String id, String nickname) {
+            this.id = id;
+            this.nickname = nickname;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getNickname() {
+            return nickname;
         }
     }
 }

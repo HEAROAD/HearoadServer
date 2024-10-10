@@ -30,13 +30,12 @@ public class UserController {
     private final VoiceAnalysisResultRepository voiceAnalysisResultRepository;
     private final VoiceAnalysisService voiceAnalysisService;
 
-    // 수정된 로그인 엔드포인트
     @PostMapping("/login/oauth/kakao")
-    public ResponseEntity<LoginResponse> kakaoLoginFromAndroid(@RequestParam String accessToken) {
+    public ResponseEntity<LoginResponse> kakaoLoginFromAndroid(@RequestParam String token) {
         try {
-            return ResponseEntity.ok(kakaoService.kakaoLoginWithToken(accessToken));
-        } catch (NoSuchElementException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found");
+            return ResponseEntity.ok(kakaoService.kakaoLoginWithToken(token));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
