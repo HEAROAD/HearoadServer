@@ -16,7 +16,6 @@ public class AuthTokensGenerator {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    // id와 nickname을 받아 Access Token 생성
     public AuthTokens generate(String uid, String nickname) {
         long now = (new Date()).getTime();
         Date accessTokenExpiredAt = new Date(now + ACCESS_TOKEN_EXPIRE_TIME);
@@ -30,7 +29,6 @@ public class AuthTokensGenerator {
         return AuthTokens.of(accessToken, refreshToken, BEARER_TYPE, ACCESS_TOKEN_EXPIRE_TIME / 1000L);
     }
 
-    // 기존 메소드 오버로딩 (하위 호환성 유지)
     public AuthTokens generate(String uid) {
         return generate(uid, null);
     }

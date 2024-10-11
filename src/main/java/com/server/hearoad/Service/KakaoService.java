@@ -29,10 +29,8 @@ public class KakaoService {
 
     public LoginResponse kakaoLoginWithToken(String accessToken) {
         try {
-            // 카카오 액세스 토큰으로 사용자 정보 가져오기
             KakaoUserInfo userInfo = getKakaoUserInfo(accessToken);
 
-            // 사용자 정보로 로그인 또는 회원가입 처리
             User user = userRepository.findById(userInfo.getId()).orElse(null);
             if (user == null) {
                 user = new User();
@@ -42,7 +40,6 @@ public class KakaoService {
                 userRepository.save(user);
             }
 
-            // 새로운 JWT 토큰 생성
             AuthTokens newToken = authTokensGenerator.generate(user.getId());
             return new LoginResponse(Long.parseLong(user.getId()), user.getNickname(), newToken);
         } catch (Exception e) {
@@ -101,7 +98,6 @@ public class KakaoService {
         }
     }
 
-    // 카카오 사용자 정보를 담는 내부 클래스
     private static class KakaoUserInfo {
         private String id;
         private String nickname;
