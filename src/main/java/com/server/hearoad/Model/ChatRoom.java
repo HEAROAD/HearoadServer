@@ -17,13 +17,13 @@ import java.util.Date;
 public class ChatRoom {
     @Id
     private String id;
-    private String userId; // 채팅방을 생성한 사용자 ID
+    private String userId;
     private String title;
-    private Date lastMessageTime; // 가장 최근 메시지 시간
+    private Date lastMessageTime;
 
     public ChatRoom(String userId, String title) {
         this.userId = userId;
         this.title = title;
-        this.lastMessageTime = new Date(); // 생성 시점의 시간
+        this.lastMessageTime = new Date();
     }
 }

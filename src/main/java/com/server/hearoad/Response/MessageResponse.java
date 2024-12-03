@@ -1,15 +1,14 @@
 package com.server.hearoad.Response;
 
 public class MessageResponse {
-    private String originalMessage; // 원본 메시지
-    private String keywords; // 추출된 핵심 단어
+    private String originalMessage;
+    private String keywords;
 
     public MessageResponse(String originalMessage, String keywords) {
         this.originalMessage = originalMessage;
         this.keywords = keywords;
     }
 
-    // Getters and Setters
     public String getOriginalMessage() {
         return originalMessage;
     }

@@ -33,7 +33,7 @@ public class ChatController {
     private final MessageService messageService;
     private final KakaoService kakaoService;
 
-    private final String fastApiServerUrl = "http://localhost:8082"; // FastAPI 서버 주소 설정
+    private final String fastApiServerUrl = "http://localhost:8082";
 
     @PostMapping("/room")
     public ResponseEntity<ChatRoom> createChatRoom(@RequestBody ChatRoom chatRoom, HttpServletRequest request) {

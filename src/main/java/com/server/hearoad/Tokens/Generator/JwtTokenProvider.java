@@ -25,7 +25,7 @@ public class JwtTokenProvider {
 
     public String accessTokenGenerate(String subject, String nickname, Date expiredAt) {
         return Jwts.builder()
-                .setSubject(subject)    // uid
+                .setSubject(subject)
                 .claim("nickname", nickname)
                 .setExpiration(expiredAt)
                 .signWith(key, SignatureAlgorithm.HS512)

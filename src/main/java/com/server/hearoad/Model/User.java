@@ -14,16 +14,15 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "users")
 public class User {
     @Id
-    private String id;  // 카카오 userId를 저장
+    private String id;
     private String nickname;
     private String profileImage;
-    private String loginType;  // 로그인 유형 추가 (kakao 등)
+    private String loginType;
 
     public String getNickname() {
         return nickname;
     }
 
-    // id 없이 nickname과 profileImage만 설정하는 생성자
     public User(String nickname, String profileImage) {
         this.nickname = nickname;
         this.profileImage = profileImage;

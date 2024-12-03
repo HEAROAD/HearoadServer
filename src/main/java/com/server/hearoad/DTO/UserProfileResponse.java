@@ -2,7 +2,7 @@ package com.server.hearoad.DTO;
 
 public class UserProfileResponse {
     private String nickname;
-    private String character; // 분석된 캐릭터 정보, 없을 경우 "히로"
+    private String character;
 
     public UserProfileResponse(String nickname, String character) {
         this.nickname = nickname;

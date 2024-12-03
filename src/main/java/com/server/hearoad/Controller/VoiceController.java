@@ -26,29 +26,25 @@ public class VoiceController {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
-    // 파일 업로드 API
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(
             @RequestParam("word") String word,
             @RequestParam("emoji") String emoji,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String jwtToken // JWT 토큰을 헤더로 받음
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String jwtToken
     ) {
-        // JWT 토큰에서 실제 사용자 ID를 추출
         String token = jwtToken.replace("Bearer ", "");
-        String userId = jwtTokenProvider.getSubject(token); // JWT에서 subject (사용자 ID) 추출
+        String userId = jwtTokenProvider.getSubject(token);
 
-        // 사용자 정보 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        // TTS 파일 생성 및 업로드
+
         String publicUrl = ttsService.synthesizeSpeechToFileAndUpload(word, emoji);
 
         if (publicUrl == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Mp3 파일을 생성하는 데 실패했습니다.");
         }
 
-        // TTSFile 객체 생성 및 저장
         TTSFile ttsFile = new TTSFile();
         ttsFile.setWord(word);
         ttsFile.setEmoji(emoji);
@@ -56,56 +52,46 @@ public class VoiceController {
         ttsFile.setUser(user);
         ttsFileRepository.save(ttsFile);
 
-        // 응답 생성
         TTSResponse response = new TTSResponse("MP3 파일이 생성되었습니다.", publicUrl, emoji, word);
         return ResponseEntity.ok(response);
     }
 
-    // 사용자 파일 조회 API
     @GetMapping("/files")
     public ResponseEntity<List<TTSFile>> getUserFiles(@RequestHeader("Authorization") String jwtToken) {
         String token = jwtToken.replace("Bearer ", "");
-        String userId = jwtTokenProvider.getSubject(token); // JWT에서 subject (사용자 ID) 추출
+        String userId = jwtTokenProvider.getSubject(token);
 
-        // 사용자 정보 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        // 사용자의 파일 목록 조회
         List<TTSFile> userFiles = ttsFileRepository.findByUser(user);
 
         return ResponseEntity.ok(userFiles);
     }
 
-    // 파일 삭제 API
     @DeleteMapping("/delete/{fileId}")
     public ResponseEntity<?> deleteUserFile(
             @PathVariable String fileId,
             @RequestHeader(HttpHeaders.AUTHORIZATION) String jwtToken
     ) {
         String token = jwtToken.replace("Bearer ", "");
-        String userId = jwtTokenProvider.getSubject(token); // JWT에서 subject (사용자 ID) 추출
+        String userId = jwtTokenProvider.getSubject(token);
 
-        // 사용자 정보 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        // 파일 조회
         TTSFile ttsFile = ttsFileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));
 
-        // 파일 소유자 확인
         if (!ttsFile.getUser().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 파일을 삭제할 권한이 없습니다.");
         }
 
-        // 파일 삭제 (S3에서)
         boolean isDeletedFromS3 = ttsService.deleteFileFromS3(ttsFile.getFilePath());
         if (!isDeletedFromS3) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("S3에서 파일 삭제에 실패했습니다.");
         }
 
-        // 데이터베이스에서 파일 삭제
         ttsFileRepository.delete(ttsFile);
 
         return ResponseEntity.ok("파일이 성공적으로 삭제되었습니다.");

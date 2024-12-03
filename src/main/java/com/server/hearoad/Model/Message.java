@@ -21,9 +21,9 @@ public class Message {
     private String userId;
     private String type;
     private String message;
-    private String fileUrl; // 외부 파일 URL (Base64 저장하지 않을 때 사용)
-    private String fileData; // Base64 인코딩된 파일 데이터 (MongoDB에 저장)
-    private String fileName; // 파일 이름
+    private String fileUrl;
+    private String fileData;
+    private String fileName;
     private Date timestamp;
 
     public Message(String chatRoomId, String userId, String type, String message, String fileUrl, String fileData, String fileName) {

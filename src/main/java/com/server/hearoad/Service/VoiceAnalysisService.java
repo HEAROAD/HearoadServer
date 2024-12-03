@@ -29,25 +29,19 @@ public class VoiceAnalysisService {
     private final ObjectMapper objectMapper;
 
     public VoiceAnalysisResult analyzeVoice(MultipartFile file, String nickname) throws Exception {
-        // 업로드된 MP3 파일을 임시 디렉토리에 저장
         Path tempMp3File = Files.createTempFile("voice_", "." + getFileExtension(file.getOriginalFilename()));
         file.transferTo(tempMp3File.toFile());
 
-        // MP3 파일을 WAV 파일로 변환
         Path tempWavFile = Files.createTempFile("voice_", ".wav");
         convertMp3ToWav(tempMp3File, tempWavFile);
 
-        // FastAPI로 변환된 WAV 파일 전송 및 분석 결과 받기
         String fastApiResponse = sendFileToFastApi(tempWavFile);
 
-        // JSON 응답에서 캐릭터 필드 추출
         String character = extractCharacterFromJson(fastApiResponse);
 
-        // 결과 객체 생성 및 저장
         VoiceAnalysisResult result = new VoiceAnalysisResult(nickname, fastApiResponse, character);
         voiceAnalysisResultRepository.save(result);
 
-        // 임시 파일 삭제
         Files.delete(tempMp3File);
         Files.delete(tempWavFile);
 
@@ -55,11 +49,9 @@ public class VoiceAnalysisService {
     }
 
     private void convertMp3ToWav(Path mp3FilePath, Path wavFilePath) throws Exception {
-        // MP3 파일을 오디오 입력 스트림으로 변환
         try (InputStream mp3Stream = Files.newInputStream(mp3FilePath)) {
             AudioInputStream mp3AudioStream = AudioSystem.getAudioInputStream(mp3Stream);
 
-            // WAV 파일로 변환하기 위한 설정
             AudioFormat baseFormat = mp3AudioStream.getFormat();
             AudioFormat decodedFormat = new AudioFormat(
                     AudioFormat.Encoding.PCM_SIGNED,
@@ -72,7 +64,6 @@ public class VoiceAnalysisService {
             );
 
             try (AudioInputStream wavAudioStream = AudioSystem.getAudioInputStream(decodedFormat, mp3AudioStream)) {
-                // WAV 파일로 저장
                 AudioSystem.write(wavAudioStream, AudioFileFormat.Type.WAVE, wavFilePath.toFile());
             }
         }
