@@ -14,9 +14,9 @@ public class MessageService {
     private final ChatRoomService chatRoomService;
 
     public Message sendMessage(String chatRoomId, String userId, String type, String message, String fileUrl, String fileData, String fileName) {
-        Message msg = new Message(chatRoomId, userId, type, message, fileUrl, fileData, fileName);
-        chatRoomService.updateLastMessageTime(chatRoomId); // 메시지 전송 시 채팅방 마지막 메시지 시간 업데이트
-        return messageRepository.save(msg);
+        Message message1 = new Message(chatRoomId, userId, type, message, fileUrl, fileData, fileName);
+        chatRoomService.updateLastMessageTime(chatRoomId);
+        return messageRepository.save(message1);
     }
 
     public List<Message> getMessagesByChatRoomId(String chatRoomId) {
