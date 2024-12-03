@@ -34,7 +34,7 @@ public class ChatController {
     private final KakaoService kakaoService;
 
     // FastAPI 서버 URL 설정
-    private final String fastApiServerUrl = "http://localhost:8000"; // FastAPI 서버 주소 설정
+    private final String fastApiServerUrl = "http://localhost:8082"; // FastAPI 서버 주소 설정
 
     // 채팅방 생성
     @PostMapping("/room")
